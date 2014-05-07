@@ -1,0 +1,15 @@
+<package>
+  <description brief="pololu_driver">
+
+     pololu_driver
+
+  </description>
+  <author>SEEBYTE EMILY</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/pololu_driver</url>
+  <depend package="asv_msgs"/>
+
+</package>
+
+
