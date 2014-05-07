@@ -18,7 +18,7 @@ from asv_msgs.msg import ThrusterCommand
 # Constants
 PORT = '/dev/ttyACM0'
 TOPIC_THROTTLE = '/motors/throttle'
-WATCHDOG_PERIOD = 0.5
+DRIVER_TIMEOUT = 0.5
 LOOP_RATE = 10  # Hz
 
 
@@ -29,33 +29,26 @@ class PololuNode(object):
 
         # latest throttle received
         self.throttle = np.zeros(6)
+        self.last_msg_t = 0
 
         # Subscribers
         self.throttle_sub = rospy.Subscriber(TOPIC_THROTTLE, ThrusterCommand, self.handle_throttle)
 
         # Services
 
-        # Timers
-        self.watchdog = rospy.Timer(rospy.Duration(WATCHDOG_PERIOD), self.handle_watchdog, oneshot=True)
-
     def loop(self):
+        if (rospy.Time.now().to_sec() - self.last_msg_t) > DRIVER_TIMEOUT:
+            self.throttle = np.zeros(6)
+
         for servo in range(0, 2):
             self.pololu.set_servo(servo, self.throttle[servo])
 
     def handle_throttle(self, msg):
+        self.last_msg_t = rospy.Time.now().to_sec()
         try:
             self.throttle = np.clip(np.array(msg.throttle[0:6]), -100, 100)
-            self.clear_watchdog()
         except Exception:
             rospy.logerr('%s bad input command, skipping!')
-
-    def handle_watchdog(self):
-        self.throttle = np.zeros(6)
-        self.pololu.set_all_neutral()
-
-    def clear_watchdog(self):
-        self.watchdog.shutdown()
-        self.watchdog = rospy.Timer(rospy.Duration(WATCHDOG_PERIOD), self.handle_watchdog, oneshot=True)
 
 
 if __name__ == '__main__':
