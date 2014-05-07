@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import rospy
 import roslib
 roslib.load_manifest('pololu_driver')
 
+import rospy
 import sys
 import numpy as np
 
