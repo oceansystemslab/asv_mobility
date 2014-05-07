@@ -36,7 +36,6 @@ class PololuNode(object):
         self.throttle_sub = rospy.Subscriber(TOPIC_THROTTLE, ThrusterCommand, self.handle_throttle)
 
         # Services
-        def
 
     def loop(self):
         if (rospy.Time.now().to_sec() - self.last_msg_t) > DRIVER_TIMEOUT:
@@ -68,9 +67,11 @@ if __name__ == '__main__':
         except rospy.ROSInterruptException:
             rospy.loginfo('%s caught ros interrupt!', name)
             node.pololu.set_all_neutral()
+            node.pololu.port.close()
         except Exception as e:
             rospy.logfatal('%s caught exception and dying!', name)
             node.pololu.set_all_neutral()
+            node.pololu.port.close()
             sys.exit(-1)
 
 
