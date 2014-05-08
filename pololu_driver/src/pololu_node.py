@@ -18,7 +18,7 @@ from asv_msgs.msg import ThrusterCommand
 # Constants
 PORT = '/dev/ttyACM0'
 TOPIC_THROTTLE = '/motors/throttle'
-DRIVER_TIMEOUT = 0.5
+MSG_TIMEOUT = 0.5 # seconds
 LOOP_RATE = 10  # Hz
 
 
@@ -38,16 +38,19 @@ class PololuNode(object):
         # Services
 
     def loop(self):
-        if (rospy.Time.now().to_sec() - self.last_msg_t) > DRIVER_TIMEOUT:
+        # if message is old and throttle is non-zero then set to zero
+        if (rospy.Time.now().to_sec() - self.last_msg_t) > MSG_TIMEOUT and any(self.throttle):
             self.throttle = np.zeros(6)
+            rospy.loginfo('Thruster command outdated')
 
         for servo in range(0, 2):
             if self.pololu.set_servo(servo, self.throttle[servo]) > 0:
                 rospy.logerr('Error writing to Pololu')
 
     def handle_throttle(self, msg):
-        self.last_msg_t = rospy.Time.now().to_sec()
+        # self.last_msg_t = rospy.Time.now().to_sec()
         try:
+            self.last_msg_t = msg.header.stamp.to_sec()
             self.throttle = np.clip(np.array(msg.throttle[0:6]), -100, 100)
         except Exception:
             rospy.logerr('%s bad input command, skipping!')
