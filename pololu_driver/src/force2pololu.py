@@ -24,7 +24,7 @@ class MotorMapper(object):
         self.i = 0
 
         # Subscribers
-        self.throttle_pub = rospy.Subscriber(TOPIC_THROTTLE, ThrusterCommand)
+        self.throttle_pub = rospy.Publisher(TOPIC_THROTTLE, ThrusterCommand)
 
         # Services
 
@@ -32,7 +32,7 @@ class MotorMapper(object):
         self.i += 10
         self.i %= 100
         msg = ThrusterCommand()
-        msg.throttle = [self.i - 50, self.i - 50, 0, 0, 0, 0]
+        msg.throttle = [self.i, 0, 0, 0, 0, 0]
         self.throttle_pub.publish(msg)
 
 

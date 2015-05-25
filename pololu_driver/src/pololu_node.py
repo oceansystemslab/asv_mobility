@@ -30,18 +30,21 @@ class PololuNode(object):
         # latest throttle received
         self.throttle = np.zeros(6)
         self.last_msg_t = 0
+        self.motor_switch =0
 
         # Subscribers
         self.throttle_sub = rospy.Subscriber(TOPIC_THROTTLE, ThrusterCommand, self.handle_throttle)
 
         # Services
+        def
 
     def loop(self):
         if (rospy.Time.now().to_sec() - self.last_msg_t) > DRIVER_TIMEOUT:
             self.throttle = np.zeros(6)
 
         for servo in range(0, 2):
-            self.pololu.set_servo(servo, self.throttle[servo])
+            if self.pololu.set_servo(servo, self.throttle[servo]) > 0:
+                rospy.logerr('Error writing to Pololu')
 
     def handle_throttle(self, msg):
         self.last_msg_t = rospy.Time.now().to_sec()

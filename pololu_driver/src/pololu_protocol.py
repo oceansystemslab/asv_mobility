@@ -7,7 +7,6 @@ import serial
 OK = 0
 ERROR = 1
 BAUD_RATE = 2400
-THRUSTER_SCALEDOWN = 10
 
 class PololuIF(object):
     def __init__(self, port):
@@ -16,7 +15,6 @@ class PololuIF(object):
     def set_servo(self, servo_id, throttle):
         """ Sets a specific servo to a specific position using specified serial connection.
 
-        :param serial_dev: serial device
         :param servo_id: id of the servo - only 0 and 1 are used on Emily
         :param throttle: from -100 to 100
         :return: zero if succeeded, non-zero for failure
@@ -25,9 +23,9 @@ class PololuIF(object):
         # Clamp values
         throttle = max(-100, min(100, throttle))
 
-        # Scale down the thrust
-        if servo_id == 0:
-            throttle /= THRUSTER_SCALEDOWN
+        # # Scale down the thrust
+        # if servo_id == 0:
+        #     throttle /= THRUSTER_SCALEDOWN
 
         # Valid range is 500-5500
         rescaled_throttle = int(0xFE * (throttle+100)/200)
