@@ -7,8 +7,9 @@ roslib.load_manifest('asv_pilot')
 import rospy
 import numpy as np
 np.set_printoptions(precision=3, suppress=True)
-from transformations import euler_from_quaternion
 
+
+from transformations import euler_from_quaternion
 import controllers as ctrl
 
 # Messages
