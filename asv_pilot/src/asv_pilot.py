@@ -8,6 +8,8 @@ import rospy
 import numpy as np
 from tf.transformations import euler_from_quaternion
 
+import controllers as ctrl
+
 # Messages
 from asv_msgs.msg import PilotRequest, ThrusterCommand
 from nav_msgs.msg import Odometry
@@ -35,10 +37,10 @@ class Pilot(object):
 
         # Subscribers
         self.waypoint_sub = rospy.Subscriber(TOPIC_WAYPOINT, PilotRequest, self.handle_waypoint)
-        self.odometry_sub = rospy.Subscriber(ODOMETRY_NAV, PilotRequest, self.handle_odometry)
+        self.odometry_sub = rospy.Subscriber(ODOMETRY_NAV, Odometry, self.handle_odometry)
 
         # Publishers
-        self.throttle_pu = rospy.Publisher(TOPIC_THROTTLE, ThrusterCommand)
+        self.throttle_pub = rospy.Publisher(TOPIC_THROTTLE, ThrusterCommand)
 
         # Services
 
@@ -48,17 +50,22 @@ class Pilot(object):
             self.odometry_switch = False
             rospy.logerr('Odometry outdated')
 
+        if self.odometry_switch is True:
+            throttle = ctrl.compute_throttle(self.pos, self.des_pos)
+            throttle_msg = ThrusterCommand()
+            throttle_msg.header.stamp = rospy.Time().now()
+            throttle_msg.throttle = throttle
 
     def handle_odometry(self, msg):
         try:
             print 'position', msg.pose.pose.position
-            self.pos = msg.pose.pose.position
-            print 'orientation', msg.pose.pose.orientation
-            self.rotation = msg.pose.pose.orientation
+            self.pos[0:3] = np.array(msg.pose.pose.position)
+            print 'orientation', np.array(msg.pose.pose.orientation)
+            self.pos[3:6] = np.array(msg.pose.pose.orientation)
             self.last_odometry_t = msg.header.stamp.to_sec()
             self.odometry_switch = True
-        except Exception:
-            rospy.logerr('Bad odometry message format, skipping!')
+        except Exception as e:
+            rospy.logerr('%s Bad odometry message format, skipping!', e)
 
     def handle_waypoint(self, msg):
         try:
