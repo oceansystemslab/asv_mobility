@@ -1602,4 +1602,314 @@ class Arcball(object):
             self._qnow = self._qdown
         else:
             q = [numpy.dot(self._vdown, vnow), t[0], t[1], t[2]]
-            self._qnow = quaternion_multiply(q
+            self._qnow = quaternion_multiply(q, self._qdown)
+
+    def next(self, acceleration=0.0):
+        """Continue rotation in direction of last drag."""
+        q = quaternion_slerp(self._qpre, self._qnow, 2.0+acceleration, False)
+        self._qpre, self._qnow = self._qnow, q
+
+    def matrix(self):
+        """Return homogeneous rotation matrix."""
+        return quaternion_matrix(self._qnow)
+
+
+def arcball_map_to_sphere(point, center, radius):
+    """Return unit sphere coordinates from window coordinates."""
+    v0 = (point[0] - center[0]) / radius
+    v1 = (center[1] - point[1]) / radius
+    n = v0*v0 + v1*v1
+    if n > 1.0:
+        # position outside of sphere
+        n = math.sqrt(n)
+        return numpy.array([v0/n, v1/n, 0.0])
+    else:
+        return numpy.array([v0, v1, math.sqrt(1.0 - n)])
+
+
+def arcball_constrain_to_axis(point, axis):
+    """Return sphere point perpendicular to axis."""
+    v = numpy.array(point, dtype=numpy.float64, copy=True)
+    a = numpy.array(axis, dtype=numpy.float64, copy=True)
+    v -= a * numpy.dot(a, v)  # on plane
+    n = vector_norm(v)
+    if n > _EPS:
+        if v[2] < 0.0:
+            numpy.negative(v, v)
+        v /= n
+        return v
+    if a[2] == 1.0:
+        return numpy.array([1.0, 0.0, 0.0])
+    return unit_vector([-a[1], a[0], 0.0])
+
+
+def arcball_nearest_axis(point, axes):
+    """Return axis, which arc is nearest to point."""
+    point = numpy.array(point, dtype=numpy.float64, copy=False)
+    nearest = None
+    mx = -1.0
+    for axis in axes:
+        t = numpy.dot(arcball_constrain_to_axis(point, axis), point)
+        if t > mx:
+            nearest = axis
+            mx = t
+    return nearest
+
+
+# epsilon for testing whether a number is close to zero
+_EPS = numpy.finfo(float).eps * 4.0
+
+# axis sequences for Euler angles
+_NEXT_AXIS = [1, 2, 0, 1]
+
+# map axes strings to/from tuples of inner axis, parity, repetition, frame
+_AXES2TUPLE = {
+    'sxyz': (0, 0, 0, 0), 'sxyx': (0, 0, 1, 0), 'sxzy': (0, 1, 0, 0),
+    'sxzx': (0, 1, 1, 0), 'syzx': (1, 0, 0, 0), 'syzy': (1, 0, 1, 0),
+    'syxz': (1, 1, 0, 0), 'syxy': (1, 1, 1, 0), 'szxy': (2, 0, 0, 0),
+    'szxz': (2, 0, 1, 0), 'szyx': (2, 1, 0, 0), 'szyz': (2, 1, 1, 0),
+    'rzyx': (0, 0, 0, 1), 'rxyx': (0, 0, 1, 1), 'ryzx': (0, 1, 0, 1),
+    'rxzx': (0, 1, 1, 1), 'rxzy': (1, 0, 0, 1), 'ryzy': (1, 0, 1, 1),
+    'rzxy': (1, 1, 0, 1), 'ryxy': (1, 1, 1, 1), 'ryxz': (2, 0, 0, 1),
+    'rzxz': (2, 0, 1, 1), 'rxyz': (2, 1, 0, 1), 'rzyz': (2, 1, 1, 1)}
+
+_TUPLE2AXES = dict((v, k) for k, v in _AXES2TUPLE.items())
+
+
+def vector_norm(data, axis=None, out=None):
+    """Return length, i.e. Euclidean norm, of ndarray along axis.
+
+    >>> v = numpy.random.random(3)
+    >>> n = vector_norm(v)
+    >>> numpy.allclose(n, numpy.linalg.norm(v))
+    True
+    >>> v = numpy.random.rand(6, 5, 3)
+    >>> n = vector_norm(v, axis=-1)
+    >>> numpy.allclose(n, numpy.sqrt(numpy.sum(v*v, axis=2)))
+    True
+    >>> n = vector_norm(v, axis=1)
+    >>> numpy.allclose(n, numpy.sqrt(numpy.sum(v*v, axis=1)))
+    True
+    >>> v = numpy.random.rand(5, 4, 3)
+    >>> n = numpy.empty((5, 3))
+    >>> vector_norm(v, axis=1, out=n)
+    >>> numpy.allclose(n, numpy.sqrt(numpy.sum(v*v, axis=1)))
+    True
+    >>> vector_norm([])
+    0.0
+    >>> vector_norm([1])
+    1.0
+
+    """
+    data = numpy.array(data, dtype=numpy.float64, copy=True)
+    if out is None:
+        if data.ndim == 1:
+            return math.sqrt(numpy.dot(data, data))
+        data *= data
+        out = numpy.atleast_1d(numpy.sum(data, axis=axis))
+        numpy.sqrt(out, out)
+        return out
+    else:
+        data *= data
+        numpy.sum(data, axis=axis, out=out)
+        numpy.sqrt(out, out)
+
+
+def unit_vector(data, axis=None, out=None):
+    """Return ndarray normalized by length, i.e. Euclidean norm, along axis.
+
+    >>> v0 = numpy.random.random(3)
+    >>> v1 = unit_vector(v0)
+    >>> numpy.allclose(v1, v0 / numpy.linalg.norm(v0))
+    True
+    >>> v0 = numpy.random.rand(5, 4, 3)
+    >>> v1 = unit_vector(v0, axis=-1)
+    >>> v2 = v0 / numpy.expand_dims(numpy.sqrt(numpy.sum(v0*v0, axis=2)), 2)
+    >>> numpy.allclose(v1, v2)
+    True
+    >>> v1 = unit_vector(v0, axis=1)
+    >>> v2 = v0 / numpy.expand_dims(numpy.sqrt(numpy.sum(v0*v0, axis=1)), 1)
+    >>> numpy.allclose(v1, v2)
+    True
+    >>> v1 = numpy.empty((5, 4, 3))
+    >>> unit_vector(v0, axis=1, out=v1)
+    >>> numpy.allclose(v1, v2)
+    True
+    >>> list(unit_vector([]))
+    []
+    >>> list(unit_vector([1]))
+    [1.0]
+
+    """
+    if out is None:
+        data = numpy.array(data, dtype=numpy.float64, copy=True)
+        if data.ndim == 1:
+            data /= math.sqrt(numpy.dot(data, data))
+            return data
+    else:
+        if out is not data:
+            out[:] = numpy.array(data, copy=False)
+        data = out
+    length = numpy.atleast_1d(numpy.sum(data*data, axis))
+    numpy.sqrt(length, length)
+    if axis is not None:
+        length = numpy.expand_dims(length, axis)
+    data /= length
+    if out is None:
+        return data
+
+
+def random_vector(size):
+    """Return array of random doubles in the half-open interval [0.0, 1.0).
+
+    >>> v = random_vector(10000)
+    >>> numpy.all(v >= 0) and numpy.all(v < 1)
+    True
+    >>> v0 = random_vector(10)
+    >>> v1 = random_vector(10)
+    >>> numpy.any(v0 == v1)
+    False
+
+    """
+    return numpy.random.random(size)
+
+
+def vector_product(v0, v1, axis=0):
+    """Return vector perpendicular to vectors.
+
+    >>> v = vector_product([2, 0, 0], [0, 3, 0])
+    >>> numpy.allclose(v, [0, 0, 6])
+    True
+    >>> v0 = [[2, 0, 0, 2], [0, 2, 0, 2], [0, 0, 2, 2]]
+    >>> v1 = [[3], [0], [0]]
+    >>> v = vector_product(v0, v1)
+    >>> numpy.allclose(v, [[0, 0, 0, 0], [0, 0, 6, 6], [0, -6, 0, -6]])
+    True
+    >>> v0 = [[2, 0, 0], [2, 0, 0], [0, 2, 0], [2, 0, 0]]
+    >>> v1 = [[0, 3, 0], [0, 0, 3], [0, 0, 3], [3, 3, 3]]
+    >>> v = vector_product(v0, v1, axis=1)
+    >>> numpy.allclose(v, [[0, 0, 6], [0, -6, 0], [6, 0, 0], [0, -6, 6]])
+    True
+
+    """
+    return numpy.cross(v0, v1, axis=axis)
+
+
+def angle_between_vectors(v0, v1, directed=True, axis=0):
+    """Return angle between vectors.
+
+    If directed is False, the input vectors are interpreted as undirected axes,
+    i.e. the maximum angle is pi/2.
+
+    >>> a = angle_between_vectors([1, -2, 3], [-1, 2, -3])
+    >>> numpy.allclose(a, math.pi)
+    True
+    >>> a = angle_between_vectors([1, -2, 3], [-1, 2, -3], directed=False)
+    >>> numpy.allclose(a, 0)
+    True
+    >>> v0 = [[2, 0, 0, 2], [0, 2, 0, 2], [0, 0, 2, 2]]
+    >>> v1 = [[3], [0], [0]]
+    >>> a = angle_between_vectors(v0, v1)
+    >>> numpy.allclose(a, [0, 1.5708, 1.5708, 0.95532])
+    True
+    >>> v0 = [[2, 0, 0], [2, 0, 0], [0, 2, 0], [2, 0, 0]]
+    >>> v1 = [[0, 3, 0], [0, 0, 3], [0, 0, 3], [3, 3, 3]]
+    >>> a = angle_between_vectors(v0, v1, axis=1)
+    >>> numpy.allclose(a, [1.5708, 1.5708, 1.5708, 0.95532])
+    True
+
+    """
+    v0 = numpy.array(v0, dtype=numpy.float64, copy=False)
+    v1 = numpy.array(v1, dtype=numpy.float64, copy=False)
+    dot = numpy.sum(v0 * v1, axis=axis)
+    dot /= vector_norm(v0, axis=axis) * vector_norm(v1, axis=axis)
+    return numpy.arccos(dot if directed else numpy.fabs(dot))
+
+
+def inverse_matrix(matrix):
+    """Return inverse of square transformation matrix.
+
+    >>> M0 = random_rotation_matrix()
+    >>> M1 = inverse_matrix(M0.T)
+    >>> numpy.allclose(M1, numpy.linalg.inv(M0.T))
+    True
+    >>> for size in range(1, 7):
+    ...     M0 = numpy.random.rand(size, size)
+    ...     M1 = inverse_matrix(M0)
+    ...     if not numpy.allclose(M1, numpy.linalg.inv(M0)): print(size)
+
+    """
+    return numpy.linalg.inv(matrix)
+
+
+def concatenate_matrices(*matrices):
+    """Return concatenation of series of transformation matrices.
+
+    >>> M = numpy.random.rand(16).reshape((4, 4)) - 0.5
+    >>> numpy.allclose(M, concatenate_matrices(M))
+    True
+    >>> numpy.allclose(numpy.dot(M, M.T), concatenate_matrices(M, M.T))
+    True
+
+    """
+    M = numpy.identity(4)
+    for i in matrices:
+        M = numpy.dot(M, i)
+    return M
+
+
+def is_same_transform(matrix0, matrix1):
+    """Return True if two matrices perform same transformation.
+
+    >>> is_same_transform(numpy.identity(4), numpy.identity(4))
+    True
+    >>> is_same_transform(numpy.identity(4), random_rotation_matrix())
+    False
+
+    """
+    matrix0 = numpy.array(matrix0, dtype=numpy.float64, copy=True)
+    matrix0 /= matrix0[3, 3]
+    matrix1 = numpy.array(matrix1, dtype=numpy.float64, copy=True)
+    matrix1 /= matrix1[3, 3]
+    return numpy.allclose(matrix0, matrix1)
+
+#
+# def _import_module(name, package=None, warn=True, prefix='_py_', ignore='_'):
+#     """Try import all public attributes from module into global namespace.
+#
+#     Existing attributes with name clashes are renamed with prefix.
+#     Attributes starting with underscore are ignored by default.
+#
+#     Return True on successful import.
+#
+#     """
+#     import warnings
+#     from importlib import import_module
+#     try:
+#         if not package:
+#             module = import_module(name)
+#         else:
+#             module = import_module('.' + name, package=package)
+#     except ImportError:
+#         if warn:
+#             warnings.warn("failed to import module %s" % name)
+#     else:
+#         for attr in dir(module):
+#             if ignore and attr.startswith(ignore):
+#                 continue
+#             if prefix:
+#                 if attr in globals():
+#                     globals()[prefix + attr] = globals()[attr]
+#                 elif warn:
+#                     warnings.warn("no Python implementation of " + attr)
+#             globals()[attr] = getattr(module, attr)
+#         return True
+#
+#
+# _import_module('_transformations')
+
+if __name__ == "__main__":
+    import doctest
+    import random  # used in doctests
+    numpy.set_printoptions(suppress=True, precision=5)
+    doctest.testmod()
