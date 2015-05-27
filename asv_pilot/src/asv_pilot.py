@@ -6,7 +6,7 @@ roslib.load_manifest('asv_pilot')
 
 import rospy
 import numpy as np
-from tf.transformations import euler_from_quaternion
+from transformations import euler_from_quaternion
 
 import controllers as ctrl
 
@@ -60,8 +60,9 @@ class Pilot(object):
         try:
             print 'position', msg.pose.pose.position
             self.pos[0:3] = np.array(msg.pose.pose.position)
-            print 'orientation', np.array(msg.pose.pose.orientation)
-            self.pos[3:6] = np.array(msg.pose.pose.orientation)
+            rotation = euler_from_quaternion(np.array(msg.pose.pose.orientation))
+            print 'orientation', rotation
+            self.pos[3:6] = rotation
             self.last_odometry_t = msg.header.stamp.to_sec()
             self.odometry_switch = True
         except Exception as e:

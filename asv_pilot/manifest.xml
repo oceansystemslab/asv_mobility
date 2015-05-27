@@ -10,7 +10,6 @@
   <url>http://ros.org/wiki/asv_pilot</url>
   <depend package="asv_msgs"/>
   <depend package="nav_msgs"/>
-  <depend package="geometry_msgs"/>
 </package>
 
 
