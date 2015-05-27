@@ -1,0 +1,15 @@
+<package>
+  <description brief="asv_pilot">
+
+     asv_pilot
+
+  </description>
+  <author>SEEBYTE EMILY</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/asv_pilot</url>
+  <depend package="asv_msgs"/>
+
+</package>
+
+
