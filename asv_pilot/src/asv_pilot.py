@@ -54,11 +54,11 @@ class Pilot(object):
             self.odometry_switch = False
             rospy.logerr('Odometry outdated')
 
-        rospy.loginfo('POS: %s DES_POS: %s', self.pose, self.des_pose )
+        rospy.loginfo('pose: %s des pose: %s', self.pose, self.des_pose )
 
         if self.odometry_switch is True:
-            throttle = np.zeros(6)
             throttle = ctrl.point_shoot(self.pose, self.des_pose)
+            rospy.logdebug('throttles: %s', throttle)
             throttle_msg = ThrusterCommand()
             throttle_msg.header.stamp = rospy.Time().now()
             throttle_msg.throttle = throttle
