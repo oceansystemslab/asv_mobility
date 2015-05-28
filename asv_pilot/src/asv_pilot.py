@@ -7,6 +7,7 @@ roslib.load_manifest('asv_pilot')
 import rospy
 import numpy as np
 np.set_printoptions(precision=3, suppress=True)
+import sys
 
 
 from transformations import euler_from_quaternion
@@ -72,13 +73,16 @@ class Pilot(object):
             self.last_odometry_t = msg.header.stamp.to_sec()
             self.odometry_switch = True
         except Exception as e:
+            rospy.logerr('%s', e)
             rospy.logerr('Bad odometry message format, skipping!')
 
     def handle_waypoint(self, msg):
         try:
-
-            self.des_pose = 0
-        except Exception:
+            self.des_pose = msg.position
+            # ignore depth, pitch and roll
+            self.des_pose[2:5] = 0
+        except Exception as e:
+            rospy.logerr('%s', e)
             rospy.logerr('Bad waypoint message format, skipping!')
 
 
@@ -96,6 +100,8 @@ if __name__ == '__main__':
         except rospy.ROSInterruptException:
             rospy.loginfo('%s caught ros interrupt!', name)
         except Exception as e:
-            rospy.logfatal('%s caught exception and dying!', e)
+            rospy.logfatal('%s', e)
+            rospy.logfatal('Caught exception and dying!', e)
+            sys.exit(-1)
 
 
