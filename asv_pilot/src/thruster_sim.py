@@ -8,6 +8,8 @@ import rospy
 import numpy as np
 import sys
 
+import emily_physics as ep
+
 # Messages
 from asv_msgs.msg import ThrusterCommand, FloatArrayStamped
 
@@ -47,7 +49,7 @@ class ThrusterSim(object):
             rospy.loginfo('Thruster command outdated')
 
         if self.motor_enable is True:
-            force = 0
+            force = ep.compute_force(self.throttle)
             msg = FloatArrayStamped()
             msg.values = force
             self.force_pub.publish(msg)
