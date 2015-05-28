@@ -13,7 +13,7 @@ from transformations import euler_from_quaternion
 import controllers as ctrl
 
 # Messages
-from vehicle_msgs.msg import PilotRequest, ThrusterCommand
+from vehicle_interface.msg import PilotRequest, ThrusterCommand
 from nav_msgs.msg import Odometry
 
 # Services

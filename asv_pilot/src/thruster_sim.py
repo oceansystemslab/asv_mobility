@@ -11,10 +11,10 @@ import sys
 import emily_physics as ep
 
 # Messages
-from vehicle_msgs.msg import ThrusterCommand, FloatArrayStamped
+from vehicle_interface.msg import ThrusterCommand, FloatArrayStamped
 
 # Services
-from vehicle_msgs.srv import BooleanService
+from vehicle_interface.srv import BooleanService
 
 # Constants
 TOPIC_THROTTLE = '/motors/throttle'
