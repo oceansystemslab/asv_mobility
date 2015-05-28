@@ -18,6 +18,7 @@ RUDDER_POSITION_Y = 0  # (not checked) in metres with respect to the centre of m
 MAX_RUDDER_ANGLE = 0.4  # (not checked) in radians - position of rudder for throttle 100
 # assumed that thrust varies linearly with the throttle (untrue)
 MAX_THRUST = 20  # (not checked) in Newtons
+MAX_THROTTLE = 100
 
 
 def compute_force(throttle):
@@ -32,8 +33,8 @@ def compute_force(throttle):
                     [thrust_throttle, rudder_throttle, 0, 0, 0, 0]
     :return: numpy array length 6 with forces in torques in boat's reference frame
     """
-    force_magnitude = MAX_THRUST * throttle[0]
-    force_angle = MAX_RUDDER_ANGLE * throttle[1]
+    force_magnitude = MAX_THRUST * throttle[0] / MAX_THROTTLE
+    force_angle = MAX_RUDDER_ANGLE * throttle[1] / MAX_THROTTLE
 
     # TODO: Check signs - make sure system of coordinates is ok
     lin_force = np.array([force_magnitude * np.cos(force_angle), force_magnitude * np.sin(force_angle), 0])
