@@ -1,0 +1,36 @@
+<launch>
+
+    <!-- start the pilot -->
+    <node name="pilot" pkg="asv_pilot" type="asv_pilot.py">
+        <!-- set topics input and outputs -->
+        <param name="topic_throttle" value="motors/throttle"/>
+    </node>
+
+    <!-- start the thruster sim -->
+    <node name="thruster_sim" pkg="asv_pilot" type="thruster_sim.py" output="screen">
+        <!-- set topics input and outputs -->
+        <param name="topic_force" value="forces/sim/body"/>
+        <param name="topic_throttle" value="motors/throttle"/>
+    </node>
+
+    <!-- load the simulation config -->
+    <rosparam command="load" file="$(find navigation_simulator)/launch/nav_config.yaml"/>
+
+    <!-- start the navigation simulator -->
+    <node name="nav_sim" pkg="navigation_simulator" type="nav_sim.py" args="-v" output="screen">
+        <!-- sim_rate: publish rate of nav messages (default: 20 Hz) -->
+        <param name="sim_rate" value="20"/>
+        <param name="pub_rate" value="10"/>
+
+        <!-- set initial position -->
+        <param name="pose_x" value="0" type="int"/>
+        <param name="pose_y" value="0" type="int"/>
+        <param name="pose_z" value="0" type="int"/>
+
+        <!-- odometry configuration (defaults are used for single vehicle operations) -->
+        <param name="topic_odom" value="nav/odometry"/>
+        <param name="frame_parent" value="odom"/>
+        <param name="frame_child" value="base_link"/>
+    </node>
+
+</launch>
