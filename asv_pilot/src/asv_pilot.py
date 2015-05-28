@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+from __future__ import division
 
 import roslib
 roslib.load_manifest('asv_pilot')
 
 import rospy
 import numpy as np
-np.set_printoptions(precision=3, suppress=True)
+np.set_printoptions(precision=1, suppress=True)
 import sys
 
 
@@ -58,10 +59,11 @@ class Pilot(object):
 
         if self.odometry_switch is True:
             throttle = ctrl.point_shoot(self.pose, self.des_pose)
-            rospy.logdebug('throttles: %s', throttle)
+            # rospy.loginfo('throttles: %s', throttle)
             throttle_msg = ThrusterCommand()
             throttle_msg.header.stamp = rospy.Time().now()
             throttle_msg.throttle = throttle
+            self.throttle_pub.publish(throttle_msg)
 
     def handle_odometry(self, msg):
         try:
@@ -99,9 +101,9 @@ if __name__ == '__main__':
             loop_rate.sleep()
         except rospy.ROSInterruptException:
             rospy.loginfo('%s caught ros interrupt!', name)
-        except Exception as e:
-            rospy.logfatal('%s', e)
-            rospy.logfatal('Caught exception and dying!', e)
-            sys.exit(-1)
+        # except Exception as e:
+        #     rospy.logfatal('%s', e)
+        #     rospy.logfatal('Caught exception and dying!')
+        #     sys.exit(-1)
 
 
