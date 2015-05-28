@@ -25,7 +25,7 @@ LOOP_RATE = 10  # Hz
 
 # TODO: convert constants to rosparams
 class ThrusterSim(object):
-    def __init__(self, name):
+    def __init__(self, name, topic_throttle, topic_force):
         self.name = name
 
         # latest throttle received
@@ -34,10 +34,10 @@ class ThrusterSim(object):
         self.motor_enable = True
 
         # Subscribers
-        self.throttle_sub = rospy.Subscriber(TOPIC_THROTTLE, ThrusterCommand, self.handle_throttle)
+        self.throttle_sub = rospy.Subscriber(topic_throttle, ThrusterCommand, self.handle_throttle)
 
         # Publishers
-        self.force_pub = rospy.Publisher(TOPIC_FORCE, FloatArrayStamped)
+        self.force_pub = rospy.Publisher(topic_force, FloatArrayStamped)
 
         # Services
         self.srv_switch = rospy.Service(SRV_SWITCH, BooleanService, self.handle_switch)
@@ -75,7 +75,13 @@ if __name__ == '__main__':
     rospy.init_node('thruster_sim')
     name = rospy.get_name()
 
-    ts = ThrusterSim(name)
+    topic_throttle = rospy.get_param('~topic_throttle', TOPIC_THROTTLE)
+    topic_force = rospy.get_param('~topic_force', TOPIC_FORCE)
+
+    rospy.loginfo('topic throttle is %s', topic_throttle)
+    rospy.loginfo('topic force is %s', topic_force)
+
+    ts = ThrusterSim(name, topic_throttle, topic_force)
     loop_rate = rospy.Rate(LOOP_RATE)
 
     while not rospy.is_shutdown():
