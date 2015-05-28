@@ -25,14 +25,15 @@ ODOMETRY_NAV = '/nav/odometry'
 ODOMETRY_TIMEOUT = 5 # seconds
 LOOP_RATE = 10  # Hz
 
-
+# TODO: add service for disabling/enabling the pilot
+# TODO: convert constants to rosparams
 class Pilot(object):
     def __init__(self, name):
         self.name = name
 
         # latest throttle received
-        self.pos = np.zeros(6)  # [x, y, z, roll, pitch, yaw]
-        self.des_pos = np.zeros(6)
+        self.pose = np.zeros(6)  # [x, y, z, roll, pitch, yaw]
+        self.des_pose = np.zeros(6)
 
         self.last_odometry_t = 0
         self.odometry_switch = False
@@ -52,11 +53,11 @@ class Pilot(object):
             self.odometry_switch = False
             rospy.logerr('Odometry outdated')
 
-        rospy.loginfo('POS: %s DES_POS: %s', self.pos, self.des_pos )
+        rospy.loginfo('POS: %s DES_POS: %s', self.pose, self.des_pose )
 
         if self.odometry_switch is True:
             throttle = np.zeros(6)
-            # throttle = ctrl.compute_throttle(self.pos, self.des_pos)
+            throttle = ctrl.point_shoot(self.pose, self.des_pose)
             throttle_msg = ThrusterCommand()
             throttle_msg.header.stamp = rospy.Time().now()
             throttle_msg.throttle = throttle
@@ -64,10 +65,10 @@ class Pilot(object):
     def handle_odometry(self, msg):
         try:
             pos = msg.pose.pose.position
-            self.pos[0:3] = np.array([pos.x, pos.y, pos.z])
+            self.pose[0:3] = np.array([pos.x, pos.y, pos.z])
             rot = msg.pose.pose.orientation
             quaternion = np.array([rot.w, rot.x, rot.y, rot.z])
-            self.pos[3:6] = euler_from_quaternion(quaternion)
+            self.pose[3:6] = euler_from_quaternion(quaternion)
             self.last_odometry_t = msg.header.stamp.to_sec()
             self.odometry_switch = True
         except Exception as e:
@@ -75,7 +76,9 @@ class Pilot(object):
 
     def handle_waypoint(self, msg):
         try:
-            self.des_pos = np.clip(np.array(msg.throttle[0:6]), -100, 100)
+            print msg.
+
+            self.des_pose =
         except Exception:
             rospy.logerr('Bad waypoint message format, skipping!')
 

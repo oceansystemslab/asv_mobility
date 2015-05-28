@@ -21,7 +21,8 @@ TOPIC_THROTTLE = '/motors/throttle'
 MSG_TIMEOUT = 0.5 # seconds
 LOOP_RATE = 10  # Hz
 
-
+# TODO: add service for disabling/enabling the PWM
+# TODO: convert constants to rosparams
 class PololuNode(object):
     def __init__(self, name, port):
         self.name = name
