@@ -17,20 +17,18 @@ import controllers as ctrl
 # Messages
 from vehicle_interface.msg import PilotRequest, ThrusterCommand
 from nav_msgs.msg import Odometry
-
-# Services
+from vehicle_interface.srv import BooleanService
 
 # Constants
-TOPIC_WAYPOINT = '/path/waypoint'
 TOPIC_THROTTLE = '/motors/throttle'
-ODOMETRY_NAV = '/nav/odometry'
+TOPIC_ODOMETRY = '/nav/odometry'
+TOPIC_WAYPOINT = '/pilot/waypoint'
+SRV_SWITCH = '/pilot/switch'
 ODOMETRY_TIMEOUT = 5 # seconds
 LOOP_RATE = 10  # Hz
 
-# TODO: add service for disabling/enabling the pilot
-# TODO: convert constants to rosparams
 class Pilot(object):
-    def __init__(self, name):
+    def __init__(self, name, topic_throttle):
         self.name = name
 
         # latest throttle received
@@ -39,15 +37,17 @@ class Pilot(object):
 
         self.last_odometry_t = 0
         self.odometry_switch = False
+        self.pilot_enable = True
 
         # Subscribers
         self.waypoint_sub = rospy.Subscriber(TOPIC_WAYPOINT, PilotRequest, self.handle_waypoint)
-        self.odometry_sub = rospy.Subscriber(ODOMETRY_NAV, Odometry, self.handle_odometry)
+        self.odometry_sub = rospy.Subscriber(TOPIC_ODOMETRY, Odometry, self.handle_odometry)
 
         # Publishers
-        self.throttle_pub = rospy.Publisher(TOPIC_THROTTLE, ThrusterCommand)
+        self.throttle_pub = rospy.Publisher(topic_throttle, ThrusterCommand)
 
         # Services
+        self.srv_switch = rospy.Service(SRV_SWITCH, BooleanService, self.handle_switch)
 
     def loop(self):
         # if message is old and throttle is non-zero then set to zero
@@ -55,11 +55,9 @@ class Pilot(object):
             self.odometry_switch = False
             rospy.logerr('Odometry outdated')
 
-        rospy.loginfo('pose: %s des pose: %s', self.pose, self.des_pose )
-
-        if self.odometry_switch is True:
+        if self.odometry_switch and self.pilot_enable:
             throttle = ctrl.point_shoot(self.pose, self.des_pose)
-            # rospy.loginfo('throttles: %s', throttle)
+            rospy.loginfo('pose: %s des pose: %s throttles: %s', self.pose, self.des_pose, throttle )
             throttle_msg = ThrusterCommand()
             throttle_msg.header.stamp = rospy.Time().now()
             throttle_msg.throttle = throttle
@@ -87,17 +85,22 @@ class Pilot(object):
             rospy.logerr('%s', e)
             rospy.logerr('Bad waypoint message format, skipping!')
 
+    def handle_switch(self, srv):
+        self.pilot_enable = srv.request
+
 
 if __name__ == '__main__':
     rospy.init_node('asv_pilot')
     name = rospy.get_name()
 
-    node = Pilot(name)
+    topic_throttle = rospy.get_param('~topic_throttle', TOPIC_THROTTLE)
+
+    pilot = Pilot(name, topic_throttle)
     loop_rate = rospy.Rate(LOOP_RATE)
 
     while not rospy.is_shutdown():
         try:
-            node.loop()
+            pilot.loop()
             loop_rate.sleep()
         except rospy.ROSInterruptException:
             rospy.loginfo('%s caught ros interrupt!', name)

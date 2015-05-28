@@ -20,8 +20,8 @@ from vehicle_interface.srv import BooleanService
 PORT = '/dev/ttyACM0'
 TOPIC_THROTTLE = '/motors/throttle'
 SRV_SWITCH = '/motors/switch'
-MSG_TIMEOUT = 0.5 # seconds
-LOOP_RATE = 10  # Hz
+MSG_TIMEOUT = 0.5  # seconds
+LOOP_RATE = 20  # Hz
 
 # TODO: convert constants to rosparams
 class PololuNode(object):
@@ -68,7 +68,9 @@ if __name__ == '__main__':
     rospy.init_node('pololu_driver')
     name = rospy.get_name()
 
-    node = PololuNode(name,PORT)
+    port = rospy.get_param('~port', PORT)
+
+    node = PololuNode(name, port)
     loop_rate = rospy.Rate(LOOP_RATE)
 
     while not rospy.is_shutdown():

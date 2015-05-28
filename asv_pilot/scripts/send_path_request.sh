@@ -1,5 +1,5 @@
 #!/bin/bash
-rostopic pub /path/waypoint vehicle_interface/PilotRequest "header:
+rostopic pub /pilot/waypoint vehicle_interface/PilotRequest "header:
   seq: 0
   stamp: {secs: 0, nsecs: 0}
   frame_id: ''
