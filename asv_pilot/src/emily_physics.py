@@ -26,6 +26,8 @@ def compute_force(throttle):
     x is along vehicles length, y is to left of the vehicle, z is down
     roll, pitch and roll are is rotation about x, y, z respectively
 
+    The adopted convention for axes is x along the vehicle, y to the right of the vehicle, z down.
+
     :param throttle: numpy array length 6, however only two first entries are used
                     [thrust_throttle, rudder_throttle, 0, 0, 0, 0]
     :return: numpy array length 6 with forces in torques in boat's reference frame
