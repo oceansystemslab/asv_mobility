@@ -13,7 +13,7 @@ from transformations import euler_from_quaternion
 import controllers as ctrl
 
 # Messages
-from asv_msgs.msg import PilotRequest, ThrusterCommand
+from vehicle_msgs.msg import PilotRequest, ThrusterCommand
 from nav_msgs.msg import Odometry
 
 # Services
@@ -76,9 +76,8 @@ class Pilot(object):
 
     def handle_waypoint(self, msg):
         try:
-            print msg.
 
-            self.des_pose =
+            self.des_pose = 0
         except Exception:
             rospy.logerr('Bad waypoint message format, skipping!')
 

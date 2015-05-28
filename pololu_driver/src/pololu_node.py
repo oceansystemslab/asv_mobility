@@ -11,10 +11,10 @@ import numpy as np
 import pololu_protocol
 
 # Messages
-from asv_msgs.msg import ThrusterCommand
+from vehicle_msgs.msg import ThrusterCommand
 
 # Services
-from asv_msgs.srv import BooleanService
+from vehicle_msgs.srv import BooleanService
 
 # Constants
 PORT = '/dev/ttyACM0'

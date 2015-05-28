@@ -11,10 +11,10 @@ import sys
 import emily_physics as ep
 
 # Messages
-from asv_msgs.msg import ThrusterCommand, FloatArrayStamped
+from vehicle_msgs.msg import ThrusterCommand, FloatArrayStamped
 
 # Services
-from asv_msgs.srv import BooleanService
+from vehicle_msgs.srv import BooleanService
 
 # Constants
 TOPIC_THROTTLE = '/motors/throttle'
@@ -25,7 +25,7 @@ LOOP_RATE = 10  # Hz
 
 # TODO: convert constants to rosparams
 class ThrusterSim(object):
-    def __init__(self, name, port):
+    def __init__(self, name):
         self.name = name
 
         # latest throttle received

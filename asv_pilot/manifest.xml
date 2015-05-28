@@ -8,7 +8,7 @@
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/asv_pilot</url>
-  <depend package="asv_msgs"/>
+  <depend package="vehicle_msgs"/>
   <depend package="nav_msgs"/>
 </package>
 

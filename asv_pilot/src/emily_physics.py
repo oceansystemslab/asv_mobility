@@ -37,7 +37,7 @@ def compute_force(throttle):
     lin_force = np.array([force_magnitude * np.cos(force_angle), force_magnitude * np.sin(force_angle), 0])
     torque = np.array([0, 0, force_magnitude * np.sin(force_angle) * RUDDER_POSITION_X])
 
-    forces = np.array([lin_force, torque])
+    forces = np.concatenate((lin_force, torque))
     return forces
 
 
