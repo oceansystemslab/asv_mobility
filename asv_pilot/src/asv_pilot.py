@@ -78,7 +78,7 @@ class Pilot(object):
 
     def handle_waypoint(self, msg):
         try:
-            self.des_pose = msg.position
+            self.des_pose = np.array(msg.position)
             # ignore depth, pitch and roll
             self.des_pose[2:5] = 0
         except Exception as e:
