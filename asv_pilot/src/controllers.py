@@ -8,9 +8,10 @@ np.set_printoptions(precision=3, suppress=True)
 MAX_THRUST = 100
 MAX_RUDDER = 100
 MAX_RUDDER_ANGLE = np.pi/2  # error in yaw at which maximum rudder throttle is applied
-MAX_THRUST_DISTANCE = 50  # distance above which the thrust is maximum
+MAX_THRUST_DISTANCE = 25  # distance above which the thrust is maximum
 TURNING_THR_ANGLE = np.pi/4  # error below which vehicle shoots towards the goal
-SLOWDOWN_OFFSET = 10  # distance in metres at which the vehicle stops the thruster
+STOPPING_THR = 1  # at this distance in meters thruster are switched off
+SLOWDOWN_OFFSET = 2  # distance in metres at which the vehicle stops the thruster
 TURNING_THRUST = 40
 
 # RUDDER_POS_X = 0.4  # distance from the centre of mass
@@ -49,8 +50,12 @@ def point_shoot(pose, des_pos):
 
     # compute thruster throttle
     # if the vehicle is pointed in the right direction
-    if abs(error_yaw) < TURNING_THR_ANGLE:
-        distance = np.linalg.norm(error_xy)
+
+    distance = np.linalg.norm(error_xy)
+
+    if distance < STOPPING_THR:
+        return throttle
+    elif abs(error_yaw) < TURNING_THR_ANGLE:
         thrust_throttle = MAX_THRUST * (distance - SLOWDOWN_OFFSET) * (1.0 / MAX_THRUST_DISTANCE)
         thrust_throttle = max(0, min(100, thrust_throttle))
     else:
