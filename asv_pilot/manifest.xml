@@ -9,6 +9,7 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/asv_pilot</url>
   <depend package="vehicle_interface"/>
+  <depend package="auv_msgs"/>
   <depend package="nav_msgs"/>
 </package>
 

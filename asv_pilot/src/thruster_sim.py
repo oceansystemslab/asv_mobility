@@ -37,7 +37,7 @@ class ThrusterSim(object):
         self.throttle_sub = rospy.Subscriber(topic_throttle, ThrusterCommand, self.handle_throttle)
 
         # Publishers
-        self.force_pub = rospy.Publisher(topic_force, FloatArrayStamped)
+        self.force_pub = rospy.Publisher(topic_force, FloatArrayStamped, tcp_nodelay=True, queue_size=1)
 
         # Services
         self.srv_switch = rospy.Service(SRV_SWITCH, BooleanService, self.handle_switch)
@@ -78,8 +78,8 @@ if __name__ == '__main__':
     topic_throttle = rospy.get_param('~topic_throttle', TOPIC_THROTTLE)
     topic_force = rospy.get_param('~topic_force', TOPIC_FORCE)
 
-    rospy.loginfo('topic throttle is %s', topic_throttle)
-    rospy.loginfo('topic force is %s', topic_force)
+    rospy.loginfo('throttle topic: %s', topic_throttle)
+    rospy.loginfo('force topic: %s', topic_force)
 
     ts = ThrusterSim(name, topic_throttle, topic_force)
     loop_rate = rospy.Rate(LOOP_RATE)
