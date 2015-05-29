@@ -1,14 +1,14 @@
 <launch>
 
     <!-- start the pilot -->
-    <node name="pilot" pkg="asv_pilot" type="asv_pilot.py">
+    <node name="pilot" pkg="asv_pilot" type="asv_pilot.py" output="screen">
         <!-- set topics input and outputs -->
         <param name="topic_throttle" value="motors/throttle"/>
         <param name="simulation" value="1"/>
     </node>
 
     <!-- start the thruster sim -->
-    <node name="thruster_sim" pkg="asv_pilot" type="thruster_sim.py" output="screen">
+    <node name="thruster_sim" pkg="asv_pilot" type="thruster_sim.py">
         <!-- set topics input and outputs -->
         <param name="topic_force" value="forces/sim/body"/>
         <param name="topic_throttle" value="motors/throttle"/>
@@ -18,7 +18,7 @@
     <rosparam command="load" file="$(find navigation_simulator)/launch/nav_config.yaml"/>
 
     <!-- start the navigation simulator -->
-    <node name="nav_sim" pkg="navigation_simulator" type="nav_sim.py" args="-v" output="screen">
+    <node name="nav_sim" pkg="navigation_simulator" type="nav_sim.py" args="-v">
         <!-- sim_rate: publish rate of nav messages (default: 20 Hz) -->
         <param name="sim_rate" value="20"/>
         <param name="pub_rate" value="10"/>
