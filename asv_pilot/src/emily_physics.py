@@ -21,7 +21,18 @@ MAX_THRUST = 20  # (not checked) in Newtons
 MAX_THROTTLE = 100
 
 
-def compute_force(throttle):
+def compute_TAM(rudder_angle):
+    TAM = np.array([
+        [ np.cos(rudder_angle) ], # surge
+        [ np.sin(rudder_angle) ], # sway
+        [ 0 ],  # heave
+        [ 0 ],  # roll
+        [ 0 ],  # pitch
+        [ np.sin(rudder_angle) * RUDDER_POSITION_X ]  # yaw
+    ])
+    return TAM
+
+def compute_body_force(throttle):
     """Computes force acting on the boat due to thrust of the motor and position of the rudder.
     The force is in boat's reference frame.
     x is along vehicles length, y is to left of the vehicle, z is down
@@ -31,16 +42,20 @@ def compute_force(throttle):
 
     :param throttle: numpy array length 6, however only two first entries are used
                     [thrust_throttle, rudder_throttle, 0, 0, 0, 0]
-    :return: numpy array length 6 with forces in torques in boat's reference frame
+    :return: numpy array length 6 with forces and torques in boat's reference frame
     """
     force_magnitude = MAX_THRUST * throttle[0] / MAX_THROTTLE
-    force_angle = MAX_RUDDER_ANGLE * throttle[1] / MAX_THROTTLE
+    # map to rudder angle
+    rudder_angle = MAX_RUDDER_ANGLE * throttle[1] / MAX_THROTTLE
 
     # TODO: Check signs - make sure system of coordinates is ok
-    lin_force = np.array([force_magnitude * np.cos(force_angle), force_magnitude * np.sin(force_angle), 0])
-    torque = np.array([0, 0, force_magnitude * np.sin(force_angle) * RUDDER_POSITION_X])
-
+    lin_force = np.array([force_magnitude * np.cos(rudder_angle), force_magnitude * np.sin(rudder_angle), 0])
+    torque = np.array([0, 0, force_magnitude * np.sin(rudder_angle) * RUDDER_POSITION_X])
     forces = np.concatenate((lin_force, torque))
+
+    force_2 = np.dot(compute_TAM(rudder_angle), np.array([force_magnitude])).flatten()
+
+    print force_2 == forces
     return forces
 
 

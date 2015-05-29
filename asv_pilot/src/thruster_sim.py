@@ -49,7 +49,7 @@ class ThrusterSim(object):
             rospy.loginfo('Thruster command outdated')
 
         if self.motor_enable is True:
-            force = ep.compute_force(self.throttle)
+            force = ep.compute_body_force(self.throttle)
             msg = FloatArrayStamped()
             msg.values = force
             self.force_pub.publish(msg)
