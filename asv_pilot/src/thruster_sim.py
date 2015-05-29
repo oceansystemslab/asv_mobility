@@ -11,7 +11,7 @@ import sys
 import emily_physics as ep
 
 # Messages
-from vehicle_interface.msg import ThrusterCommand, FloatArrayStamped
+from vehicle_interface.msg import ThrusterCommand, Vector6Stamped
 
 # Services
 from vehicle_interface.srv import BooleanService
@@ -37,7 +37,7 @@ class ThrusterSim(object):
         self.throttle_sub = rospy.Subscriber(topic_throttle, ThrusterCommand, self.handle_throttle)
 
         # Publishers
-        self.force_pub = rospy.Publisher(topic_force, FloatArrayStamped)
+        self.force_pub = rospy.Publisher(topic_force, Vector6Stamped)
 
         # Services
         self.srv_switch = rospy.Service(SRV_SWITCH, BooleanService, self.handle_switch)
@@ -50,7 +50,7 @@ class ThrusterSim(object):
 
         if self.motor_enable is True:
             force = ep.compute_body_force(self.throttle)
-            msg = FloatArrayStamped()
+            msg = Vector6Stamped()
             msg.values = force
             self.force_pub.publish(msg)
 
@@ -67,7 +67,7 @@ class ThrusterSim(object):
             self.set_force_neutral()
 
     def set_force_neutral(self):
-        msg = FloatArrayStamped()
+        msg = Vector6Stamped()
         msg.values = np.zeros(6)
         self.force_pub.publish(msg)
 
