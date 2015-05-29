@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<robot name="emily_complex">
+	<link name="base_link">
+		<visual>
+			<geometry>
+				<box size="0.6 0.35 0.1"/>
+			</geometry>
+			<material name="yellow_top">
+				<color rgba="0 0.3 0.3 1"/>
+			</material>
+		</visual>
+	</link>
+	<link name="stern_bottom">
+		<visual> 
+			<geometry>
+				<box size="0.6 0.25 0.1"/>
+			</geometry>
+			<material name="orange">
+				<color rgba="0.1 0.3 0.3 1"/>
+			</material>
+			<origin rpy="0.0 0.0 0.0" xyz="0.0 0.0 0.0"/>
+		</visual>
+	</link>
+	<link name="bow">
+		<visual>
+			<geometry>
+				<box size="0.65 0.15 0.2"/>
+			</geometry>
+			<origin rpy="0.0 0.0 0.0" xyz="0.0 0.0 0.0"/>
+		</visual>
+	</link>
+	<joint name="stern_top_to_bottom" type="fixed">
+		<parent link="base_link"/>
+		<child link="stern_bottom"/>
+		<origin xyz="0.0 0.0 -0.2"/>
+	</joint>
+	<joint name="stern_top_to_bow" type="fixed">
+		<parent link="base_link"/>
+		<child link="bow">
+		<origin xyz="0.6 0.0 0.0"/>
+	</joint>
+</robot>
+
