@@ -49,13 +49,12 @@ def compute_body_force(throttle):
     rudder_angle = MAX_RUDDER_ANGLE * throttle[1] / MAX_THROTTLE
 
     # TODO: Check signs - make sure system of coordinates is ok
-    lin_force = np.array([force_magnitude * np.cos(rudder_angle), force_magnitude * np.sin(rudder_angle), 0])
-    torque = np.array([0, 0, force_magnitude * np.sin(rudder_angle) * RUDDER_POSITION_X])
-    forces = np.concatenate((lin_force, torque))
+    # lin_force = np.array([force_magnitude * np.cos(rudder_angle), force_magnitude * np.sin(rudder_angle), 0])
+    # torque = np.array([0, 0, force_magnitude * np.sin(rudder_angle) * RUDDER_POSITION_X])
+    # forces = np.concatenate((lin_force, torque))
 
-    force_2 = np.dot(compute_TAM(rudder_angle), np.array([force_magnitude])).flatten()
+    forces = np.dot(compute_TAM(rudder_angle), np.array([force_magnitude])).flatten()
 
-    print force_2 == forces
     return forces
 
 
