@@ -45,7 +45,8 @@ def point_shoot(pose, des_pos):
     error_yaw = wrap_pi(angle_to_goal - pose[5])
 
     # map the error to the throttle, note that throttle is max for error greater than MAX_RUDDER_ANGLE radians
-    rudder_throttle = MAX_RUDDER * error_yaw * (1 / MAX_RUDDER_ANGLE)
+    # applies throttle opposite to the error
+    rudder_throttle = MAX_RUDDER * -error_yaw * (1 / MAX_RUDDER_ANGLE)
     rudder_throttle = max(-100, min(100, rudder_throttle))
 
     # compute thruster throttle
