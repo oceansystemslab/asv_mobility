@@ -52,7 +52,7 @@ class Pilot(object):
             rospy.loginfo('Using Odometry for odometry (real run).')
 
         # Publishers
-        self.throttle_pub = rospy.Publisher(topic_throttle, ThrusterCommand, tcp_nodelay=True, queue_size=1)
+        self.throttle_pub = rospy.Publisher(topic_throttle, ThrusterCommand)
 
         # Services
         self.srv_switch = rospy.Service(SRV_SWITCH, BooleanService, self.handle_switch)

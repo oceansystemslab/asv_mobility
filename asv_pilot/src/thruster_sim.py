@@ -37,7 +37,7 @@ class ThrusterSim(object):
         self.throttle_sub = rospy.Subscriber(topic_throttle, ThrusterCommand, self.handle_throttle)
 
         # Publishers
-        self.force_pub = rospy.Publisher(topic_force, FloatArrayStamped, tcp_nodelay=True, queue_size=1)
+        self.force_pub = rospy.Publisher(topic_force, FloatArrayStamped)
 
         # Services
         self.srv_switch = rospy.Service(SRV_SWITCH, BooleanService, self.handle_switch)
