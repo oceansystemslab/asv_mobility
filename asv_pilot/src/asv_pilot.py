@@ -65,7 +65,7 @@ class Pilot(object):
 
         if self.odometry_switch and self.pilot_enable:
             throttle = ctrl.point_shoot(self.pose, self.des_pose)
-            rospy.loginfo('pose: %s des pose: %s throttles: %s', self.pose, self.des_pose, throttle )
+            rospy.loginfo('pose: %s des pose: %s throttles: %s', self.pose, self.des_pose[0:2], throttle[0:2])
             throttle_msg = ThrusterCommand()
             throttle_msg.header.stamp = rospy.Time().now()
             throttle_msg.throttle = throttle

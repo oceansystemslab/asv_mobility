@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
+from __future__ import division
 import serial
 
 # Constants
@@ -19,15 +19,10 @@ class PololuIF(object):
         :param throttle: from -100 to 100
         :return: zero if succeeded, non-zero for failure
         """
-
         # Clamp values
         throttle = max(-100, min(100, throttle))
 
-        # # Scale down the thrust
-        # if servo_id == 0:
-        #     throttle /= THRUSTER_SCALEDOWN
-
-        # Valid range is 500-5500
+        # Valid range is 0-254
         rescaled_throttle = int(0xFE * (throttle+100)/200)
 
         # Construct the command for moving the servo

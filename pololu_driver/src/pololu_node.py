@@ -1,5 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+from __future__ import division
+
+"""Controls the motors on Emily via Pololu Maestro microcontroller. Consumes throttle commands. Thruster accepts
+throttles ranging from 0 to 100. Rudder controlling servo accepts values from -100 to 100. At -100 the rudder is
+forcing water jet to the right of the vehicle (i.e. vehicle starts turning right).
+"""
 
 import roslib
 roslib.load_manifest('pololu_driver')
@@ -23,7 +29,6 @@ SRV_SWITCH = '/motors/switch'
 MSG_TIMEOUT = 0.5  # seconds
 LOOP_RATE = 20  # Hz
 
-# TODO: convert constants to rosparams
 class PololuNode(object):
     def __init__(self, name, port):
         self.name = name
