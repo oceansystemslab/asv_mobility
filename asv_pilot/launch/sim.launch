@@ -22,7 +22,7 @@
     <rosparam command="load" file="$(find asv_pilot)/conf/simulation_model.yaml"/>
     <!--<rosparam command="load" file="$(find vehicle_core)/conf/thruster_model.yaml"/>-->
 
-    <param name="robot_description" command="cat $(find vehicle_core)/data/nessie.urdf"/>
+    <param name="robot_description" command="cat $(find asv_pilot)/data/emily.urdf"/>
 
     <!-- start the navigation simulator -->
     <node name="nav_sim" pkg="vehicle_core" type="node_nav_sim.py" output="screen">
