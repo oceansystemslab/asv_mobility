@@ -28,6 +28,7 @@ TOPIC_NAV = '/nav/nav_sts'
 SRV_SWITCH = '/pilot/switch'
 ODOMETRY_TIMEOUT = 5 # seconds
 LOOP_RATE = 10  # Hz
+SIMULATION = False
 
 class Pilot(object):
     def __init__(self, name, topic_throttle, topic_request, simulation):
@@ -43,6 +44,7 @@ class Pilot(object):
         self.simulation = simulation
 
         self.controller = ctrl.Controller(1/LOOP_RATE)
+        self.controller.set_mode(ctrl.CASCADED_PID)
 
         # Subscribers
         self.waypoint_sub = rospy.Subscriber(topic_request, PilotRequest, self.handle_waypoint)
@@ -68,7 +70,7 @@ class Pilot(object):
         if self.odometry_switch and self.pilot_enable:
             self.controller.update_nav(self.pose)
             self.controller.request_pose(self.des_pose)
-            throttle = self.controller.evaluate_controller()
+            throttle = self.controller.evaluate_control()
             rospy.loginfo('pose: %s des pose: %s throttles: %s', self.pose, self.des_pose[0:2], throttle[0:2])
             throttle_msg = ThrusterCommand()
             throttle_msg.header.stamp = rospy.Time().now()
@@ -104,6 +106,8 @@ class Pilot(object):
         try:
             self.des_pose = np.array(msg.position)
             # ignore depth, pitch and roll
+            if any(self.des_pose[2:5]):
+                rospy.logwarn('Non-zero depth, pitch or roll requested.')
             self.des_pose[2:5] = 0
         except Exception as e:
             rospy.logerr('%s', e)
@@ -120,7 +124,7 @@ if __name__ == '__main__':
 
     topic_throttle = rospy.get_param('~topic_throttle', TOPIC_THROTTLE)
     topic_request = rospy.get_param('~topic_request', TOPIC_REQUEST)
-    simulation = bool(int(rospy.get_param('~simulation', False)))
+    simulation = bool(int(rospy.get_param('~simulation', SIMULATION)))
 
     rospy.loginfo('throttle topic: %s', topic_throttle)
     rospy.loginfo('Simulation: %s', simulation)
