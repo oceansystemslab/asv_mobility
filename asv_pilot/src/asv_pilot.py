@@ -36,6 +36,7 @@ class Pilot(object):
 
         # latest throttle received
         self.pose = np.zeros(6)  # [x, y, z, roll, pitch, yaw]
+        self.vel = np.zeros(6)
         self.des_pose = np.zeros(6)
 
         self.last_odometry_t = 0
@@ -69,9 +70,10 @@ class Pilot(object):
             rospy.logerr('Odometry outdated')
 
         if self.odometry_switch and self.pilot_enable:
-            self.controller.update_nav(self.pose)
+            self.controller.update_nav(self.pose, velocity=self.vel)
             self.controller.request_pose(self.des_pose)
             throttle = self.controller.evaluate_control()
+            rospy.loginfo(str(self.controller))
             rospy.loginfo('pose: %s des pose: %s throttles: %s', self.pose, self.des_pose[0:2], throttle[0:2])
             throttle_msg = ThrusterCommand()
             throttle_msg.header.stamp = rospy.Time().now()
@@ -97,6 +99,10 @@ class Pilot(object):
             self.pose[0:3] = np.array([pos.north, pos.east, pos.depth])
             orient = msg.orientation
             self.pose[3:6] = np.array([orient.roll, orient.pitch, orient.yaw])
+            vel = msg.body_velocity
+            self.vel[0:3] = np.array([vel.x, vel.y, vel.z])
+            rot = msg.orientation_rate
+            self.vel[3:6] = np.array([rot.roll, rot.pitch, rot.yaw])
             self.last_odometry_t = msg.header.stamp.to_sec()
             self.odometry_switch = True
         except Exception as e:

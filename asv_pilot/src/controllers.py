@@ -51,6 +51,8 @@ class Controller(object):
         self.pose = np.zeros(6)
         self.body_vel = np.zeros(6)
 
+        self.throttle = np.zeros(6)
+
         self.des_pose = np.zeros(6)
         self.des_vel = np.zeros(6)
 
@@ -61,7 +63,7 @@ class Controller(object):
         self.J_inv = np.zeros((6,6))
 
         self.min_throttle = np.array([0, -MAX_THROTTLE])
-        self.max_throttle = np.array([-MAX_THROTTLE, MAX_THROTTLE])
+        self.max_throttle = np.array([MAX_THROTTLE, MAX_THROTTLE])
 
         self.kpp = np.zeros(2)
         self.kpi = np.zeros(2)
@@ -113,6 +115,7 @@ class Controller(object):
             vel_xyz = (pose - self.pose)/self.dt
             self.body_vel = np.dot(self.J_inv, vel_xyz)
         self.pose = pose
+        print self.body_vel
 
     def set_mode(self, mode):
         if mode != self.mode:
@@ -128,7 +131,7 @@ class Controller(object):
         self.des_vel = req_vel
 
     def cascaded_pid(self):
-        throttle = np.zeros(6)
+        self.throttle = np.zeros(6)
 
         # depth, roll and pitch are ignored
         # the controller will attempt to get to an xy coordinate
@@ -137,7 +140,7 @@ class Controller(object):
         full_e_p = np.dot(self.J_inv, e_xyz)
 
         self.ep_p[0] = full_e_p[0]
-        self.ep_p[1] = wrap_pi(self.ep_p[1])
+        self.ep_p[1] = wrap_pi(np.arctan2(full_e_p[1], full_e_p[0]))
 
         self.ep_d = (self.ep_p - self.prev_ep_p)/self.dt
 
@@ -161,6 +164,8 @@ class Controller(object):
         self.prev_ev_p = self.ev_p
         self.ev_p[0] = self.des_vel[0] - self.body_vel[0]
         self.ev_p[1] = wrap_pi(self.des_vel[1] - self.body_vel[5])
+        print self.des_vel[1], self.body_vel[5]
+
 
         self.ev_d = (self.ev_p - self.prev_ev_p)/self.dt
 
@@ -170,10 +175,10 @@ class Controller(object):
         self.ev_i = np.clip(self.ev_p + self.ev_i, -self.kvi_limit, self.kvi_limit)
         self.ep_p[1] = wrap_pi(self.ep_p[1])
 
-        throttle[0:2] = self.kvp * self.ev_p + self.kvi * self.ev_i + self.ev_d * self.kvd
-        throttle[0:2] = np.clip(throttle[0:2], self.min_throttle, self.max_throttle)
+        self.throttle[0:2] = self.kvp * self.ev_p + self.kvi * self.ev_i + self.ev_d * self.kvd
+        self.throttle[0:2] = np.clip(self.throttle[0:2], self.min_throttle, self.max_throttle)
 
-        return throttle
+        return self.throttle
 
     def point_shoot(self):
         """Simplist controller which first adjusts orientation (P control) and then moves forward while maintaining
@@ -267,3 +272,17 @@ class Controller(object):
 
         self.turning_angle_threshold = params['turning_angle_threshold']
         self.turning_speed = params['turning_speed']
+
+    def __str__(self):
+
+        return """
+          ep: %s
+          ed: %s
+          ei: %s
+          evp: %s
+          evd: %s
+          evi: %s
+          tau_c: %s
+        """ % (self.ep_p, self.ep_d, self.ep_i,
+               self.ev_p, self.ev_d, self.ev_i,
+               self.throttle)
