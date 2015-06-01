@@ -22,13 +22,13 @@ sim:
     model:
         shape: 'cylindrical'        # approximation to use
 
-        radius: 0.150               # m
-        length: 1.1                 # m
+        radius: 0.20               # m
+        length: 1.35                 # m
         volume: 0.12                # volume of the vehicle (m^3)
 
-        mass: 12.0                  # kg guess
-        weight: 110.0               # N guess
-        buoyancy: 300               # N guess
+        mass: 13.0                  # kg guess
+        weight: 120.0               # N guess
+        buoyancy: 350               # N guess
 
         water_rho: 1025.0           # density (salt water) (kg/m^3)
 
