@@ -18,19 +18,19 @@ import controllers as ctrl
 from vehicle_interface.msg import PilotRequest, ThrusterCommand
 from nav_msgs.msg import Odometry
 from auv_msgs.msg import NavSts
-from vehicle_interface.srv import BooleanService
+from vehicle_interface.srv import BooleanService, BooleanServiceResponse
 
 # Constants
 TOPIC_THROTTLE = '/motors/throttle'
 TOPIC_ODOMETRY = '/nav/odometry'
-TOPIC_WAYPOINT = '/pilot/waypoint'
+TOPIC_REQUEST = '/pilot/position_req'
 TOPIC_NAV = '/nav/nav_sts'
 SRV_SWITCH = '/pilot/switch'
 ODOMETRY_TIMEOUT = 5 # seconds
 LOOP_RATE = 10  # Hz
 
 class Pilot(object):
-    def __init__(self, name, topic_throttle, simulation):
+    def __init__(self, name, topic_throttle, topic_request, simulation):
         self.name = name
 
         # latest throttle received
@@ -43,7 +43,7 @@ class Pilot(object):
         self.simulation = simulation
 
         # Subscribers
-        self.waypoint_sub = rospy.Subscriber(TOPIC_WAYPOINT, PilotRequest, self.handle_waypoint)
+        self.waypoint_sub = rospy.Subscriber(topic_request, PilotRequest, self.handle_waypoint)
         if self.simulation:
             self.nav_sub = rospy.Subscriber(TOPIC_NAV, NavSts, self.handle_nav)
             rospy.loginfo('Using NavSts for odometry (simulation).')
@@ -107,6 +107,7 @@ class Pilot(object):
 
     def handle_switch(self, srv):
         self.pilot_enable = srv.request
+        return BooleanServiceResponse(True)
 
 
 if __name__ == '__main__':
@@ -114,12 +115,13 @@ if __name__ == '__main__':
     name = rospy.get_name()
 
     topic_throttle = rospy.get_param('~topic_throttle', TOPIC_THROTTLE)
+    topic_request = rospy.get_param('~topic_request', TOPIC_REQUEST)
     simulation = bool(int(rospy.get_param('~simulation', False)))
 
     rospy.loginfo('throttle topic: %s', topic_throttle)
     rospy.loginfo('Simulation: %s', simulation)
 
-    pilot = Pilot(name, topic_throttle, simulation)
+    pilot = Pilot(name, topic_throttle, topic_request, simulation)
     loop_rate = rospy.Rate(LOOP_RATE)
 
     while not rospy.is_shutdown():
