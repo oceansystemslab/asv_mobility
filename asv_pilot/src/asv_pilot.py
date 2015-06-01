@@ -42,6 +42,8 @@ class Pilot(object):
         self.pilot_enable = True
         self.simulation = simulation
 
+        self.controller = ctrl.Controller(1/LOOP_RATE)
+
         # Subscribers
         self.waypoint_sub = rospy.Subscriber(topic_request, PilotRequest, self.handle_waypoint)
         if self.simulation:
@@ -64,7 +66,9 @@ class Pilot(object):
             rospy.logerr('Odometry outdated')
 
         if self.odometry_switch and self.pilot_enable:
-            throttle = ctrl.point_shoot(self.pose, self.des_pose)
+            self.controller.update_nav(self.pose)
+            self.controller.request_pose(self.des_pose)
+            throttle = self.controller.evaluate_controller()
             rospy.loginfo('pose: %s des pose: %s throttles: %s', self.pose, self.des_pose[0:2], throttle[0:2])
             throttle_msg = ThrusterCommand()
             throttle_msg.header.stamp = rospy.Time().now()
