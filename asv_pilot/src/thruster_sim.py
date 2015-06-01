@@ -23,7 +23,6 @@ SRV_SWITCH = '/motors/switch'
 MSG_TIMEOUT = 0.5  # seconds
 LOOP_RATE = 10  # Hz
 
-# TODO: convert constants to rosparams
 class ThrusterSim(object):
     def __init__(self, name, topic_throttle, topic_force):
         self.name = name
