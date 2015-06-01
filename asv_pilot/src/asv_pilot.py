@@ -31,7 +31,7 @@ LOOP_RATE = 10  # Hz
 SIMULATION = False
 
 class Pilot(object):
-    def __init__(self, name, topic_throttle, topic_request, simulation):
+    def __init__(self, name, topic_throttle, topic_request, simulation, controller_config):
         self.name = name
 
         # latest throttle received
@@ -45,6 +45,7 @@ class Pilot(object):
 
         self.controller = ctrl.Controller(1/LOOP_RATE)
         self.controller.set_mode(ctrl.CASCADED_PID)
+        self.controller.update_gains(controller_config)
 
         # Subscribers
         self.waypoint_sub = rospy.Subscriber(topic_request, PilotRequest, self.handle_waypoint)
@@ -125,11 +126,14 @@ if __name__ == '__main__':
     topic_throttle = rospy.get_param('~topic_throttle', TOPIC_THROTTLE)
     topic_request = rospy.get_param('~topic_request', TOPIC_REQUEST)
     simulation = bool(int(rospy.get_param('~simulation', SIMULATION)))
+    controller_config = rospy.get_param('~controller', dict())
+
+    print controller_config
 
     rospy.loginfo('throttle topic: %s', topic_throttle)
     rospy.loginfo('Simulation: %s', simulation)
 
-    pilot = Pilot(name, topic_throttle, topic_request, simulation)
+    pilot = Pilot(name, topic_throttle, topic_request, simulation, controller_config)
     loop_rate = rospy.Rate(LOOP_RATE)
 
     while not rospy.is_shutdown():

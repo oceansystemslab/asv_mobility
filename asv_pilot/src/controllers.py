@@ -10,11 +10,11 @@ MAX_THROTTLE = 100
 MAX_RUDDER = 100
 MAX_RUDDER_ANGLE = 3*np.pi/2  # error in yaw at which maximum rudder throttle is applied
 MAX_SPEED_DISTANCE = 35  # distance above which the thrust is maximum
-TURNING_THR_ANGLE = np.pi/4  # error below which vehicle shoots towards the goal
+TURNING_ANGLE_THR = np.pi/4  # error below which vehicle shoots towards the goal
 STOPPING_THR = 1  # at this distance in meters thruster are switched off
 SLOWDOWN_OFFSET = 2  # distance in metres at which the vehicle stops the thruster
 TURNING_THRUST = 40  # throttle
-TURNING_SPEED = 5  # m/s
+TURNING_SPEED = 1  # m/s
 
 MAX_SPEED = 2.5
 MAX_E_X_I = 0.5
@@ -45,7 +45,7 @@ class Controller(object):
             CASCADED_PID: self.cascaded_pid
         }
 
-        self.turning_angle_threshold = TURNING_THR_ANGLE
+        self.turning_angle_threshold = TURNING_ANGLE_THR
         self.turning_speed = TURNING_SPEED
 
         self.pose = np.zeros(6)
@@ -207,7 +207,7 @@ class Controller(object):
 
         if distance < STOPPING_THR:
             return throttle
-        elif abs(error_yaw) < TURNING_THR_ANGLE:
+        elif abs(error_yaw) < TURNING_ANGLE_THR:
             thrust_throttle = MAX_THROTTLE * (distance - SLOWDOWN_OFFSET) * (1.0 / MAX_SPEED_DISTANCE)
             thrust_throttle = max(0, min(100, thrust_throttle))
         else:
@@ -218,7 +218,7 @@ class Controller(object):
         return throttle
 
     def update_gains(self, params):
-                # pid parameters (position)
+        # pid parameters (position)
         self.kpp = np.array([
             params['pos_x']['kp'],
             params['pos_n']['kp'],
@@ -264,3 +264,6 @@ class Controller(object):
             params['vel_u']['input_lim'],
             params['vel_r']['input_lim'],
         ])
+
+        self.turning_angle_threshold = params['turning_angle_threshold']
+        self.turning_speed = params['turning_speed']
