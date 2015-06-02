@@ -104,9 +104,11 @@ class Pilot(object):
             self.pose[3:6] = euler_from_quaternion(quaternion)
             # TODO: add velocity
             # self.vel =
+
+            dt = msg.header.stamp.to_sec() - self.last_odometry_t
             self.last_odometry_t = msg.header.stamp.to_sec()
             self.odometry_switch = True
-            self.controller.update_nav(self.pose)
+            self.controller.update_nav(self.pose, dt)
         except Exception as e:
             rospy.logerr('%s', e)
             rospy.logerr('Bad odometry message format, skipping!')
