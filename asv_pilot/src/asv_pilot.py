@@ -97,18 +97,17 @@ class Pilot(object):
 
     def handle_odometry(self, msg):
         try:
-            pos = msg.pose.pose.position
-            self.pose[0:3] = np.array([pos.x, pos.y, pos.z])
-            rot = msg.pose.pose.orientation
-            quaternion = np.array([rot.w, rot.x, rot.y, rot.z])
-            self.pose[3:6] = euler_from_quaternion(quaternion)
-            # TODO: add velocity
-            # self.vel =
-
             dt = msg.header.stamp.to_sec() - self.last_odometry_t
-            self.last_odometry_t = msg.header.stamp.to_sec()
-            self.odometry_switch = True
-            self.controller.update_nav(self.pose, dt)
+            # TODO: add a constant
+            if dt > 0.1:
+                pos = msg.pose.pose.position
+                self.pose[0:3] = np.array([pos.x, pos.y, pos.z])
+                rot = msg.pose.pose.orientation
+                quaternion = np.array([rot.w, rot.x, rot.y, rot.z])
+                self.pose[3:6] = euler_from_quaternion(quaternion)
+                self.last_odometry_t = msg.header.stamp.to_sec()
+                self.odometry_switch = True
+                self.controller.update_nav(self.pose, dt)
         except Exception as e:
             rospy.logerr('%s', e)
             rospy.logerr('Bad odometry message format, skipping!')
