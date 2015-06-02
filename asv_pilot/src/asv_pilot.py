@@ -63,11 +63,12 @@ class Pilot(object):
         # Subscribers
         self.waypoint_sub = rospy.Subscriber(topic_request, PilotRequest, self.handle_waypoint)
         if self.simulation:
-            self.nav_sub = rospy.Subscriber(TOPIC_NAV, NavSts, self.handle_nav)
-            rospy.loginfo('Using NavSts for odometry (simulation).')
+            self.nav_sub = rospy.Subscriber(TOPIC_NAV, NavSts, self.handle_sim_nav)
+            rospy.loginfo('Using NavSts from simulation (simulation).')
         else:
             self.odometry_sub = rospy.Subscriber(TOPIC_ODOMETRY, Odometry, self.handle_odometry)
-            rospy.loginfo('Using Odometry for odometry (real run).')
+            # self.nav_sub = rospy.Subscriber(TOPIC_NAV, NavSts, self.handle_real_nav)
+            rospy.loginfo('Using NavSts from vehicle (real run).')
 
         # Publishers
         self.throttle_pub = rospy.Publisher(topic_throttle, ThrusterCommand)
@@ -83,8 +84,8 @@ class Pilot(object):
             rospy.logerr('Odometry outdated')
 
         if self.odometry_switch and self.pilot_enable:
-            self.controller.update_nav(self.pose, velocity=self.vel)
-            # self.controller.update_nav(self.pose)
+            # self.controller.update_nav(self.pose, velocity=self.vel)
+            self.controller.update_nav(self.pose)
             self.controller.request_pose(self.des_pose)
             throttle = self.controller.evaluate_control()
             rospy.loginfo(str(self.controller))
@@ -109,7 +110,25 @@ class Pilot(object):
             rospy.logerr('%s', e)
             rospy.logerr('Bad odometry message format, skipping!')
 
-    def handle_nav(self, msg):
+    # def handle_real_nav(self, msg):
+    #     try:
+    #         self.pose[0:2] = geo2xyz(msg.global_position.latitude, msg.global_position.longitude, self.origin)
+    #         # self.pose[2] = msg.altitude
+    #         self.pose[2] = 0
+    #         orient = msg.orientation
+    #         vel = msg.body_velocity
+    #         rot = msg.orientation_rate
+    #         self.pose[3:6] = np.deg2rad(np.array([orient.roll, orient.pitch, orient.yaw]))
+    #         self.vel[0:3] = np.array([vel.x, vel.y, vel.z])
+    #         self.vel[3:6] = np.array([rot.roll, rot.pitch, rot.yaw])
+    #
+    #         self.last_odometry_t = msg.header.stamp.to_sec()
+    #         self.odometry_switch = True
+    #     except Exception as e:
+    #         rospy.logerr('%s', e)
+    #         rospy.logerr('Bad odometry message format, skipping!')
+
+    def handle_sim_nav(self, msg):
         try:
             pos = msg.position
             orient = msg.orientation
