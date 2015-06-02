@@ -32,6 +32,17 @@ LOOP_RATE = 10  # Hz
 SIMULATION = False
 
 class Pilot(object):
+    """Node provides an interface between control logic and ROS. This node outputs throttle commands that can be
+     consumed either by pololu_driver or thruster_sim. The controller will not run if fresh odometry
+     information is not available. The controller can be enabled or disabled via service.
+     Generally, the asv has two degrees of freedom: surge and yaw. They are coupled - that is the boat cannot yaw
+     without moving forward.
+     Different control policies:
+        - point and shoot - simple P controller on position (distance to goal and orientation towards the goal).
+        - cascaded pid - PID position controller outputs a desired velocity, then PID velocity controller attempts to
+            achieve this velocity
+        - velocity control - in progress
+    """
     def __init__(self, name, topic_throttle, topic_request, simulation, controller_config):
         self.name = name
 
@@ -73,6 +84,7 @@ class Pilot(object):
 
         if self.odometry_switch and self.pilot_enable:
             self.controller.update_nav(self.pose, velocity=self.vel)
+            # self.controller.update_nav(self.pose)
             self.controller.request_pose(self.des_pose)
             throttle = self.controller.evaluate_control()
             rospy.loginfo(str(self.controller))
@@ -89,6 +101,8 @@ class Pilot(object):
             rot = msg.pose.pose.orientation
             quaternion = np.array([rot.w, rot.x, rot.y, rot.z])
             self.pose[3:6] = euler_from_quaternion(quaternion)
+            # TODO: add velocity
+            # self.vel =
             self.last_odometry_t = msg.header.stamp.to_sec()
             self.odometry_switch = True
         except Exception as e:
@@ -98,12 +112,12 @@ class Pilot(object):
     def handle_nav(self, msg):
         try:
             pos = msg.position
-            self.pose[0:3] = np.array([pos.north, pos.east, pos.depth])
             orient = msg.orientation
-            self.pose[3:6] = np.array([orient.roll, orient.pitch, orient.yaw])
             vel = msg.body_velocity
-            self.vel[0:3] = np.array([vel.x, vel.y, vel.z])
             rot = msg.orientation_rate
+            self.pose[0:3] = np.array([pos.north, pos.east, pos.depth])
+            self.pose[3:6] = np.array([orient.roll, orient.pitch, orient.yaw])
+            self.vel[0:3] = np.array([vel.x, vel.y, vel.z])
             self.vel[3:6] = np.array([rot.roll, rot.pitch, rot.yaw])
             self.last_odometry_t = msg.header.stamp.to_sec()
             self.odometry_switch = True

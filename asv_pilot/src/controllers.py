@@ -106,15 +106,17 @@ class Controller(object):
         return self.policies[self.mode]()
 
     def update_nav(self, pose, **kwargs):
-        self.J = update_jacobian(self.J, pose[3], pose[4], pose[5])
-        self.J_inv = np.linalg.inv(self.J)
         # get the body velocity
         if 'velocity' in kwargs.keys():
             self.body_vel = kwargs['velocity']
         else:
             vel_xyz = (pose - self.pose)/self.dt
             self.body_vel = np.dot(self.J_inv, vel_xyz)
-        self.pose = pose
+            # print self.body_vel
+        self.pose = np.copy(pose)
+
+        self.J = update_jacobian(self.J, pose[3], pose[4], pose[5])
+        self.J_inv = np.linalg.inv(self.J)
 
     def set_mode(self, mode):
         if mode != self.mode:
