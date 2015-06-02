@@ -105,12 +105,12 @@ class Controller(object):
         """
         return self.policies[self.mode]()
 
-    def update_nav(self, pose, **kwargs):
+    def update_nav(self, pose, dt, **kwargs):
         # get the body velocity
         if 'velocity' in kwargs.keys():
             self.body_vel = kwargs['velocity']
         else:
-            vel_xyz = (pose - self.pose)/self.dt
+            vel_xyz = (pose - self.pose)/dt
             self.body_vel = np.dot(self.J_inv, vel_xyz)
             # print self.body_vel
         self.pose = np.copy(pose)

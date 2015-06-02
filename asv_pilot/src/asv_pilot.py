@@ -85,7 +85,7 @@ class Pilot(object):
 
         if self.odometry_switch and self.pilot_enable:
             # self.controller.update_nav(self.pose, velocity=self.vel)
-            self.controller.update_nav(self.pose)
+            # self.controller.update_nav(self.pose)
             self.controller.request_pose(self.des_pose)
             throttle = self.controller.evaluate_control()
             rospy.loginfo(str(self.controller))
@@ -106,6 +106,7 @@ class Pilot(object):
             # self.vel =
             self.last_odometry_t = msg.header.stamp.to_sec()
             self.odometry_switch = True
+            self.controller.update_nav(self.pose)
         except Exception as e:
             rospy.logerr('%s', e)
             rospy.logerr('Bad odometry message format, skipping!')
@@ -138,8 +139,10 @@ class Pilot(object):
             self.pose[3:6] = np.array([orient.roll, orient.pitch, orient.yaw])
             self.vel[0:3] = np.array([vel.x, vel.y, vel.z])
             self.vel[3:6] = np.array([rot.roll, rot.pitch, rot.yaw])
+            dt = msg.header.stamp.to_sec() - self.last_odometry_t
             self.last_odometry_t = msg.header.stamp.to_sec()
             self.odometry_switch = True
+            self.controller.update_nav(self.pose, dt)
         except Exception as e:
             rospy.logerr('%s', e)
             rospy.logerr('Bad navigation message format, skipping!')
