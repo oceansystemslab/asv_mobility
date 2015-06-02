@@ -8,7 +8,7 @@ roslib.load_manifest('asv_pilot')
 import rospy
 import numpy as np
 np.set_printoptions(precision=1, suppress=True)
-import sys
+# import sys
 
 
 from transformations import euler_from_quaternion
@@ -144,7 +144,7 @@ if __name__ == '__main__':
     print controller_config
 
     rospy.loginfo('throttle topic: %s', topic_throttle)
-    rospy.loginfo('Simulation: %s', simulation)
+    rospy.loginfo('simulation: %s', simulation)
 
     pilot = Pilot(name, topic_throttle, topic_request, simulation, controller_config)
     loop_rate = rospy.Rate(LOOP_RATE)

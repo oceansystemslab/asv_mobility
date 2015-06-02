@@ -4,7 +4,9 @@ from __future__ import division
 
 """Controls the motors on Emily via Pololu Maestro microcontroller. Consumes throttle commands. Thruster accepts
 throttles ranging from 0 to 100. Rudder controlling servo accepts values from -100 to 100. At -100 the rudder is
-forcing water jet to the right of the vehicle (i.e. vehicle starts turning right).
+forcing water jet to the right of the vehicle (i.e. vehicle starts turning right). Last throttle command is applied for
+THRUSTER_COMMAND_TIMEOUT. After this time the motors are set to neutral position (for safety).
+If the node is suddenly halted it attempts setting motors to neutral position before closing.
 """
 
 import roslib
@@ -26,7 +28,7 @@ from vehicle_interface.srv import BooleanService
 PORT = '/dev/ttyACM0'
 TOPIC_THROTTLE = '/motors/throttle'
 SRV_SWITCH = '/motors/switch'
-MSG_TIMEOUT = 0.5  # seconds
+THRUSTER_COMMAND_TIMEOUT = 0.5  # seconds
 LOOP_RATE = 20  # Hz
 
 class PololuNode(object):
@@ -47,9 +49,9 @@ class PololuNode(object):
 
     def loop(self):
         # if message is old and throttle is non-zero then set to zero
-        if (rospy.Time.now().to_sec() - self.last_msg_t) > MSG_TIMEOUT and any(self.throttle):
+        if (rospy.Time.now().to_sec() - self.last_msg_t) > THRUSTER_COMMAND_TIMEOUT and any(self.throttle):
             self.throttle = np.zeros(6)
-            rospy.loginfo('Thruster command outdated')
+            rospy.logwarn('Thruster command outdated')
 
         if self.motor_enable is True:
             for servo in range(0, 2):
@@ -74,6 +76,7 @@ if __name__ == '__main__':
     name = rospy.get_name()
 
     port = rospy.get_param('~port', PORT)
+    rospy.loginfo("port: %s", port)
 
     node = PololuNode(name, port)
     loop_rate = rospy.Rate(LOOP_RATE)
