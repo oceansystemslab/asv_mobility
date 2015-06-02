@@ -140,7 +140,7 @@ class Controller(object):
         full_e_p = np.dot(self.J_inv, e_xyz)
 
         self.ep_p[0] = full_e_p[0]
-        self.ep_p[1] = wrap_pi(np.arctan2(full_e_p[1], full_e_p[0]))
+        self.ep_p[1] = wrap_pi(np.arctan2(e_xyz[1], e_xyz[0]) - self.pose[5])
 
         self.ep_d = (self.ep_p - self.prev_ep_p)/self.dt
 
@@ -151,31 +151,33 @@ class Controller(object):
         self.ep_i = np.clip(self.ep_p + self.ep_i, -self.kpi_limit, self.kpi_limit)
         self.ep_d[1] = wrap_pi(self.ep_d[1])
 
-        # ignore the translation error if bearing error is too big
-        if self.ep_p[1] > self.turning_angle_threshold:
-            self.reset_errors(1)
-            self.des_vel = TURNING_SPEED
-
         # compute the desired velocity
         self.des_vel = self.kpp * self.ep_p + self.kpi * self.ep_i + self.ep_d * self.kpd
 
-        self.des_vel = np.clip(self.des_vel, self.v_input_limit, self.v_input_limit)
+        # ignore the translation error if bearing error is too big
+        if np.abs(self.ep_p[1]) > self.turning_angle_threshold:
+            self.reset_errors(1)
+            self.des_vel[0] = TURNING_SPEED
+
+        self.des_vel = np.clip(self.des_vel, -self.v_input_limit, self.v_input_limit)
 
         self.prev_ev_p = self.ev_p
         self.ev_p[0] = self.des_vel[0] - self.body_vel[0]
         self.ev_p[1] = wrap_pi(self.des_vel[1] - self.body_vel[5])
-        print self.des_vel[1], self.body_vel[5]
-
 
         self.ev_d = (self.ev_p - self.prev_ev_p)/self.dt
 
-        changed_sign = (np.sign(self.ev_p) != np.sign(self.prev_ev_p))
-        self.ev_i[changed_sign] = 0
+        # TODO: decide
+        # not reasonable to keep it on velocity (maybe on yaw its ok)
+        # changed_sign = (np.sign(self.ev_p) != np.sign(self.prev_ev_p))
+        # self.ev_i[changed_sign] = 0
 
         self.ev_i = np.clip(self.ev_p + self.ev_i, -self.kvi_limit, self.kvi_limit)
         self.ep_p[1] = wrap_pi(self.ep_p[1])
 
+
         self.throttle[0:2] = self.kvp * self.ev_p + self.kvi * self.ev_i + self.ev_d * self.kvd
+        self.throttle[1] *= -1
         self.throttle[0:2] = np.clip(self.throttle[0:2], self.min_throttle, self.max_throttle)
 
         return self.throttle
@@ -282,7 +284,13 @@ class Controller(object):
           evp: %s
           evd: %s
           evi: %s
-          tau_c: %s
+          thr: %s
+          pos: %s %s %s
+          vel: %s %s %s
+          des_vel: %s %s
         """ % (self.ep_p, self.ep_d, self.ep_i,
                self.ev_p, self.ev_d, self.ev_i,
-               self.throttle)
+               self.throttle,
+               self.pose[0], self.pose[1], self.pose[5],
+               self.body_vel[0], self.body_vel[1], self.body_vel[5],
+               self.des_vel[0], self.des_vel[1])
