@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import division
 import numpy as np
-np.set_printoptions(precision=3, suppress=True)
+np.set_printoptions(precision=2, suppress=True)
 
 from emily_physics import update_jacobian
 
@@ -115,7 +115,6 @@ class Controller(object):
             vel_xyz = (pose - self.pose)/self.dt
             self.body_vel = np.dot(self.J_inv, vel_xyz)
         self.pose = pose
-        print self.body_vel
 
     def set_mode(self, mode):
         if mode != self.mode:
@@ -175,8 +174,8 @@ class Controller(object):
         self.ev_i = np.clip(self.ev_p + self.ev_i, -self.kvi_limit, self.kvi_limit)
         self.ep_p[1] = wrap_pi(self.ep_p[1])
 
-
         self.throttle[0:2] = self.kvp * self.ev_p + self.kvi * self.ev_i + self.ev_d * self.kvd
+        # invert rudder throttle - because of how rudder rotation maps to the generated torque
         self.throttle[1] *= -1
         self.throttle[0:2] = np.clip(self.throttle[0:2], self.min_throttle, self.max_throttle)
 
@@ -275,6 +274,8 @@ class Controller(object):
         self.turning_angle_threshold = params['turning_angle_threshold']
         self.turning_speed = params['turning_speed']
 
+        self.reset_errors(2)
+
     def __str__(self):
 
         return """
@@ -285,12 +286,12 @@ class Controller(object):
           evd: %s
           evi: %s
           thr: %s
-          pos: %s %s %s
-          vel: %s %s %s
-          des_vel: %s %s
+          pos: %s
+          vel: %s
+          des_vel: %s
         """ % (self.ep_p, self.ep_d, self.ep_i,
                self.ev_p, self.ev_d, self.ev_i,
-               self.throttle,
-               self.pose[0], self.pose[1], self.pose[5],
-               self.body_vel[0], self.body_vel[1], self.body_vel[5],
-               self.des_vel[0], self.des_vel[1])
+               self.throttle[0:2],
+               np.array([self.pose[0], self.pose[1], self.pose[5]]),
+               np.array([self.body_vel[0], self.body_vel[1], self.body_vel[5]]),
+               self.des_vel[0:2])

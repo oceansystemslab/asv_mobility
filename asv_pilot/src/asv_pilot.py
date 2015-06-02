@@ -26,7 +26,8 @@ TOPIC_ODOMETRY = '/nav/odometry'
 TOPIC_REQUEST = '/pilot/position_req'
 TOPIC_NAV = '/nav/nav_sts'
 SRV_SWITCH = '/pilot/switch'
-ODOMETRY_TIMEOUT = 5 # seconds
+SRV_PID_CONFIG = '/pilot/pid_config'
+ODOMETRY_TIMEOUT = 5  # seconds
 LOOP_RATE = 10  # Hz
 SIMULATION = False
 
@@ -62,6 +63,7 @@ class Pilot(object):
 
         # Services
         self.srv_switch = rospy.Service(SRV_SWITCH, BooleanService, self.handle_switch)
+        self.srv_pid_config = rospy.Service(SRV_PID_CONFIG, BooleanService, self.handle_pid_config)
 
     def loop(self):
         # if message is old and throttle is non-zero then set to zero
@@ -74,7 +76,7 @@ class Pilot(object):
             self.controller.request_pose(self.des_pose)
             throttle = self.controller.evaluate_control()
             rospy.loginfo(str(self.controller))
-            rospy.loginfo('pose: %s des pose: %s throttles: %s', self.pose, self.des_pose[0:2], throttle[0:2])
+            # rospy.loginfo('pose: %s des pose: %s throttles: %s', self.pose, self.des_pose[0:2], throttle[0:2])
             throttle_msg = ThrusterCommand()
             throttle_msg.header.stamp = rospy.Time().now()
             throttle_msg.throttle = throttle
@@ -124,6 +126,11 @@ class Pilot(object):
         self.pilot_enable = srv.request
         return BooleanServiceResponse(True)
 
+    def handle_pid_config(self, srv):
+        config = rospy.get_param('~controller', dict())
+        self.controller.update_gains(config)
+        rospy.loginfo("PID config reloaded")
+        return BooleanServiceResponse(True)
 
 if __name__ == '__main__':
     rospy.init_node('asv_pilot')
