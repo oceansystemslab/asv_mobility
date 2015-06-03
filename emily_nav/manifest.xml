@@ -8,7 +8,8 @@
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/emily_nav</url>
-  <depend package="nav_msgs"/>
+  <depend package="auv_msgs"/>
+  <depend package="vehicle_interface"/>
   <!--<depend package="xsens"/>-->
 
 </package>

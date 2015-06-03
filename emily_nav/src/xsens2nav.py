@@ -32,17 +32,18 @@ class Navigation(object):
     def __init__(self, name, topic_nav):
         self.name = name
 
-        self.point_ll = (0, 0)
-        self.distance_ne = (0, 0)
+        self.point_ll = np.zeros(2)
+        self.displacement_ne = np.zeros(2)
 
         self.origin_set = False
-        self.origin = (0, 0)  # [latitude, longitude] in radians
+        #
+        self.origin = np.zeros(2)  # [latitude, longitude] in radians
         # Distance to the centre of the Earth at given latitude assuming elipsoidal model of Earth.
         # If latitude is not known assume Earth is a sphere.
         self.geocentric_radius = R_EARTH
 
         # Subscribers
-        self.xsens_sub = rospy.Subscriber(TOPIC_XSENS, XSENS, self.handle_xsens)
+        # self.xsens_sub = rospy.Subscriber(TOPIC_XSENS, XSENS_MSG, self.handle_xsens)
 
         # Publishers
         self.nav_pub = rospy.Publisher(topic_nav, NavSts)
@@ -62,18 +63,18 @@ class Navigation(object):
             nav_msg.global_position.latitude = xsens_msg
             nav_msg.global_position.longitude = xsens_msg
 
-            self.point_ll = (nav_msg.global_position.latitude, nav_msg.global_position.longitude)
+            self.point_ll = np.array([nav_msg.global_position.latitude, nav_msg.global_position.longitude])
 
             # if origin is not set yet and we are at least 1 degree away from (0, 0)
             # WARN: This will cause issues when the system is used close to (0, 0) point (less than 150km)
             # TODO: find a better way to check this - potentially xkf field can inform about this
-            if not self.origin_set and (np.linalg.norm(self.point_ll) > 1):
-                self.set_origin(self.point_ll, self.distance_ne)
+            if not self.origin_set and np.any(self.point_ll > 1):
+                self.find_geo_origin(self.point_ll, self.displacement_ne)
 
             nav_msg.origin.latitude = self.origin[0]
             nav_msg.origin.longitude = self.origin[1]
 
-            self.distance_ne = self.geo2ne(self.point_ll, self.origin, self.geocentric_radius)
+            self.displacement_ne = geo2ne(self.point_ll, self.origin, self.geocentric_radius)
 
             # pose
             nav_msg.position.north = xsens_msg
@@ -108,17 +109,19 @@ class Navigation(object):
             self.geocentric_radius = R_EARTH
         return BooleanServiceResponse(True)
 
-    def set_origin(self, point_ll, distance_ne):
-        """Sets the origin to the latitude and longitude which corresponds to (0, 0) in ned reference frame
+    def find_geo_origin(self, point_ll, displacement_ne):
+        """Finds the origin in geo-referenced frame. The origin corresponds to (0, 0) in ned reference frame
         (where xsens was started)
 
         :param point_ll: current position on Earth in spherical reference frame
-        :param distance_ne: current position in ne reference (displacement from where sensor was started)
+        :param displacement_ne: current position in ne reference (displacement from where sensor was started)
         """
-        radius = self.compute_geocentric_radius(point_ll[0])
+        radius = compute_geocentric_radius(point_ll[0])
 
-        self.origin = self.ne2geo(distance_ne, point_ll, radius)
-        self.geocentric_radius = self.compute_geocentric_radius(self.origin[0])
+        # NOTE: negative sign - that is because we want to look in the direction of origin
+        self.origin = ne2geo(-displacement_ne, point_ll, radius)
+        # find the radius corresponding to the new origin
+        self.geocentric_radius = compute_geocentric_radius(self.origin[0])
         self.origin_set = True
 
 def compute_geocentric_radius(latitude):
@@ -146,7 +149,7 @@ def geo2ne(point_ll, reference, geocentric_radius):
     :param geocentric_radius: distance from the centre of the Earth to a point on the surface at a given latitude
             use compute_geocentric_radius to compute it. Can be approximated by specifying radius of spherical
             model of Earth
-    :return: distance_ne (in metres) - coordinates of point_ll in a cartesian reference frame where (0, 0) is at reference,
+    :return: displacement_ne (in metres) - coordinates of point_ll in a cartesian reference frame where (0, 0) is at reference,
             n is along North, e is along East.
     """
     point_ll_rad = np.deg2rad(point_ll)
@@ -157,27 +160,27 @@ def geo2ne(point_ll, reference, geocentric_radius):
     e = geocentric_radius * delta[1] * np.cos(reference_rad[0])
     n = geocentric_radius * delta[0]
 
-    distance_ne = (n, e)
+    displacement_ne = np.array([n, e])
 
-    return distance_ne
+    return displacement_ne
 
-def ne2geo(distance_ne, reference, geocentric_radius):
+def ne2geo(displacement_ne, reference, geocentric_radius):
     """Inverse of geo2ne(). Given a reference (latitude, longitude) and ne distance the function finds
-    a point (latitude, longitude) distance_ne away from the reference.
+    a point (latitude, longitude) displacement_ne away from the reference.
 
-    :param distance_ne: (n, e) distance along North and East.
+    :param displacement_ne: (n, e) distance along North and East.
     :param reference: a point on Earth (latitude, longitude) in degrees
     :param geocentric_radius: distance from the centre of the Earth to a point on the surface at a given latitude
             use compute_geocentric_radius to compute it. Can be approximated by specifying radius of spherical
             model of Earth
-    :return: point_ll (in degrees) - point on Earth (latitude, longitude) distance_ne away from the reference
+    :return: point_ll (in degrees) - point on Earth (latitude, longitude) displacement_ne away from the reference
     """
     reference_rad = np.deg2rad(reference)
 
-    delta_lat = distance_ne[0] / geocentric_radius
-    delta_long = distance_ne[1] / (np.cos(reference_rad[0]) * geocentric_radius)
+    delta_lat = displacement_ne[0] / geocentric_radius
+    delta_long = displacement_ne[1] / (np.cos(reference_rad[0]) * geocentric_radius)
 
-    point_ll = (reference[0] + np.rad2deg(delta_lat), reference[1] + np.rad2deg(delta_long))
+    point_ll = np.array([reference[0] + np.rad2deg(delta_lat), reference[1] + np.rad2deg(delta_long)])
 
     return point_ll
 
