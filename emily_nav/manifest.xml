@@ -9,7 +9,7 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/emily_nav</url>
   <depend package="nav_msgs"/>
-  <depend package="xsens"/>
+  <!--<depend package="xsens"/>-->
 
 </package>
 
