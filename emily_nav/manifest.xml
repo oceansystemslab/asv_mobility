@@ -1,0 +1,16 @@
+<package>
+  <description brief="emily_nav">
+
+     emily_nav
+
+  </description>
+  <author>ira</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/emily_nav</url>
+  <depend package="nav_msgs"/>
+  <depend package="xsens"/>
+
+</package>
+
+
