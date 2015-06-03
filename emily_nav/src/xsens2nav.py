@@ -10,21 +10,19 @@ import rospy
 import numpy as np
 np.set_printoptions(precision=1, suppress=True)
 
-# from transformations import euler_from_quaternion
+import geography as geo
 
 # Messages
 from auv_msgs.msg import NavSts
+from xsens.msg import Xsens
 from vehicle_interface.srv import BooleanService, BooleanServiceResponse
 # xsens message
 
-
 # Constants
 R_EARTH = 6371000  # metres - average radius
-A_EARTH = 6378137.0  # metres - semi-major axis - assumes elipsoidal model of Earth
-B_EARTH = 6356752.3  # metres - semi-minor axis - assumes elipsoidal model of Earth
 
 TOPIC_NAV = '/nav/nav_sts'
-TOPIC_XSENS = '/xsens'
+TOPIC_XSENS = '/imu/xsens'
 SRV_RESET_ORIGIN = '/nav/reset'
 LOOP_RATE = 10  # Hz
 
@@ -43,7 +41,7 @@ class Navigation(object):
         self.geocentric_radius = R_EARTH
 
         # Subscribers
-        # self.xsens_sub = rospy.Subscriber(TOPIC_XSENS, XSENS_MSG, self.handle_xsens)
+        # self.xsens_sub = rospy.Subscriber(TOPIC_XSENS, Xsens, self.handle_xsens)
 
         # Publishers
         self.nav_pub = rospy.Publisher(topic_nav, NavSts)
@@ -60,8 +58,8 @@ class Navigation(object):
             nav_msg.header.stamp = xsens_msg.header.stamp
 
             # global coords
-            nav_msg.global_position.latitude = xsens_msg
-            nav_msg.global_position.longitude = xsens_msg
+            nav_msg.global_position.latitude = xsens_msg.position.latitude
+            nav_msg.global_position.longitude = xsens_msg.position.longitude
 
             self.point_ll = np.array([nav_msg.global_position.latitude, nav_msg.global_position.longitude])
 
@@ -74,25 +72,26 @@ class Navigation(object):
             nav_msg.origin.latitude = self.origin[0]
             nav_msg.origin.longitude = self.origin[1]
 
-            self.displacement_ne = geo2ne(self.point_ll, self.origin, self.geocentric_radius)
+            self.displacement_ne = geo.geo2ne(self.point_ll, self.origin, self.geocentric_radius)
 
             # pose
-            nav_msg.position.north = xsens_msg
-            nav_msg.position.east = xsens_msg
-            nav_msg.position.depth = xsens_msg
-            nav_msg.orientation.roll = xsens_msg
-            nav_msg.orientation.pitch = xsens_msg
-            nav_msg.orientation.yaw = xsens_msg
+            nav_msg.position.north = self.displacement_ne[0]
+            nav_msg.position.east = self.displacement_ne[0]
+            nav_msg.position.depth = 0
+            # nav_msg.position.depth = -xsens_msg.position.altitude
+            nav_msg.orientation.roll = xsens_msg.orientation_euler.x
+            nav_msg.orientation.pitch = xsens_msg.orientation_euler.y
+            nav_msg.orientation.yaw = xsens_msg.orientation_euler.z
 
-            nav_msg.altitude = xsens_msg
+            nav_msg.altitude = xsens_msg.position.altitude
 
             # pose change rate
-            nav_msg.body_velocity.x = xsens_msg
-            nav_msg.body_velocity.y = xsens_msg
-            nav_msg.body_velocity.z = xsens_msg
-            nav_msg.orientation_rate.roll = xsens_msg
-            nav_msg.orientation_rate.pitch = xsens_msg
-            nav_msg.orientation_rate.yaw = xsens_msg
+            nav_msg.body_velocity.x = xsens_msg.velocity.x
+            nav_msg.body_velocity.y = xsens_msg.velocity.y
+            nav_msg.body_velocity.z = xsens_msg.velocity.z
+            nav_msg.orientation_rate.roll = xsens_msg.calibrated_gyroscope.x
+            nav_msg.orientation_rate.pitch = xsens_msg.calibrated_gyroscope.y
+            nav_msg.orientation_rate.yaw = xsens_msg.calibrated_gyroscope.z
 
             # add variances?
 
@@ -116,73 +115,14 @@ class Navigation(object):
         :param point_ll: current position on Earth in spherical reference frame
         :param displacement_ne: current position in ne reference (displacement from where sensor was started)
         """
-        radius = compute_geocentric_radius(point_ll[0])
+        radius = geo.compute_geocentric_radius(point_ll[0])
 
         # NOTE: negative sign - that is because we want to look in the direction of origin
-        self.origin = ne2geo(-displacement_ne, point_ll, radius)
+        self.origin = geo.ne2geo(-displacement_ne, point_ll, radius)
         # find the radius corresponding to the new origin
-        self.geocentric_radius = compute_geocentric_radius(self.origin[0])
+        self.geocentric_radius = geo.compute_geocentric_radius(self.origin[0])
         self.origin_set = True
 
-def compute_geocentric_radius(latitude):
-    """Finds distance to the centre of the Earth at the specified latitude. Refer to Wikipedia page:
-        - http://en.wikipedia.org/wiki/Earth_radius
-
-    :param latitude: latitude in degrees
-    :return: local radius in metres
-    """
-    lat = np.deg2rad(latitude)
-    radius = np.sqrt(((A_EARTH**2 * np.cos(lat))**2 + (B_EARTH**2 * np.sin(lat))**2) /
-                     ((A_EARTH * np.cos(lat))**2 + (B_EARTH * np.sin(lat))**2))
-    return radius
-
-def geo2ne(point_ll, reference, geocentric_radius):
-    """Given a point (latitude, longitude) and an origin the function returns a distance in n and e directions
-    on a plane tangent to Earth at the origin point. n is along North. e is along East.
-    This approximation is valid at latitudes close to the origin (how close exactly?). Zero altitude is assumed.
-
-    Explanation of the applied method (WGS84) can be found in the MTi-g User Manual, page 31:
-            - https://www.xsens.com/wp-content/uploads/2013/11/MTi-G_User_Manual_and_Technical_Documentation.pdf
-
-    :param point_ll: a point on Earth (latitude, longitude) in degrees
-    :param reference: a reference point on Earth (latitude, longitude) in degrees
-    :param geocentric_radius: distance from the centre of the Earth to a point on the surface at a given latitude
-            use compute_geocentric_radius to compute it. Can be approximated by specifying radius of spherical
-            model of Earth
-    :return: displacement_ne (in metres) - coordinates of point_ll in a cartesian reference frame where (0, 0) is at reference,
-            n is along North, e is along East.
-    """
-    point_ll_rad = np.deg2rad(point_ll)
-    reference_rad = np.deg2rad(reference)
-
-    delta = point_ll_rad - reference_rad
-
-    e = geocentric_radius * delta[1] * np.cos(reference_rad[0])
-    n = geocentric_radius * delta[0]
-
-    displacement_ne = np.array([n, e])
-
-    return displacement_ne
-
-def ne2geo(displacement_ne, reference, geocentric_radius):
-    """Inverse of geo2ne(). Given a reference (latitude, longitude) and ne distance the function finds
-    a point (latitude, longitude) displacement_ne away from the reference.
-
-    :param displacement_ne: (n, e) distance along North and East.
-    :param reference: a point on Earth (latitude, longitude) in degrees
-    :param geocentric_radius: distance from the centre of the Earth to a point on the surface at a given latitude
-            use compute_geocentric_radius to compute it. Can be approximated by specifying radius of spherical
-            model of Earth
-    :return: point_ll (in degrees) - point on Earth (latitude, longitude) displacement_ne away from the reference
-    """
-    reference_rad = np.deg2rad(reference)
-
-    delta_lat = displacement_ne[0] / geocentric_radius
-    delta_long = displacement_ne[1] / (np.cos(reference_rad[0]) * geocentric_radius)
-
-    point_ll = np.array([reference[0] + np.rad2deg(delta_lat), reference[1] + np.rad2deg(delta_long)])
-
-    return point_ll
 
 if __name__ == '__main__':
     rospy.init_node('nav')

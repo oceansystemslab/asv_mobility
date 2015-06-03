@@ -4,13 +4,12 @@
      emily_nav
 
   </description>
-  <author>ira</author>
+  <author>Marian Andrecki</author>
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
-  <url>http://ros.org/wiki/emily_nav</url>
   <depend package="auv_msgs"/>
   <depend package="vehicle_interface"/>
-  <!--<depend package="xsens"/>-->
+  <depend package="xsens"/>
 
 </package>
 
