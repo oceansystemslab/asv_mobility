@@ -90,8 +90,8 @@ class Navigation(object):
 
             # pose change rate
             # the sign is inverted because of how the sensor is positioned in reference to the boat
-            vel_xyz = -np.array([xsens_msg.velocity.x, xsens_msg.velocity.y, xsens_msg.velocity.z, 0, 0, 0])
-            J = geo.compute_jacobian(xsens_msg.orientation_euler.x, xsens_msg.orientation_euler.y, xsens_msg.orientation_euler.z)
+            vel_xyz = np.array([xsens_msg.velocity.x, xsens_msg.velocity.y, xsens_msg.velocity.z, 0, 0, 0])
+            J = geo.compute_jacobian(nav_msg.orientation.roll, nav_msg.orientation.pitch, nav_msg.orientation.yaw)
             J_inv = np.linalg.inv(J)
             vel_body = np.dot(J_inv, vel_xyz)
 
@@ -134,7 +134,7 @@ class Navigation(object):
 
 
 if __name__ == '__main__':
-    rospy.init_node('nav')
+    rospy.init_node('nav_new')
     name = rospy.get_name()
 
     topic_nav = rospy.get_param('~topic_nav', TOPIC_NAV)
