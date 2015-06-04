@@ -21,7 +21,7 @@ from vehicle_interface.srv import BooleanService, BooleanServiceResponse
 # Constants
 R_EARTH = 6371000  # metres - average radius
 
-TOPIC_NAV = '/nav/nav_sts'
+TOPIC_NAV = '/nav/nav_sts/new'
 TOPIC_XSENS = '/imu/xsens'
 SRV_RESET_ORIGIN = '/nav/reset'
 LOOP_RATE = 10  # Hz
@@ -89,10 +89,15 @@ class Navigation(object):
             nav_msg.altitude = xsens_msg.position.altitude
 
             # pose change rate
-            # values are inverted because of how the sensor is positioned in reference to the boat
-            nav_msg.body_velocity.x = -xsens_msg.velocity.x
-            nav_msg.body_velocity.y = -xsens_msg.velocity.y
-            nav_msg.body_velocity.z = -xsens_msg.velocity.z
+            # the sign is inverted because of how the sensor is positioned in reference to the boat
+            vel_xyz = -np.array([xsens_msg.velocity.x, xsens_msg.velocity.y, xsens_msg.velocity.z, 0, 0, 0])
+            J = geo.compute_jacobian(xsens_msg.orientation_euler.x, xsens_msg.orientation_euler.y, xsens_msg.orientation_euler.z)
+            J_inv = np.linalg.inv(J)
+            vel_body = np.dot(J_inv, vel_xyz)
+
+            nav_msg.body_velocity.x = vel_body[0]
+            nav_msg.body_velocity.y = vel_body[1]
+            nav_msg.body_velocity.z = vel_body[2]
             nav_msg.orientation_rate.roll = -xsens_msg.calibrated_gyroscope.x
             nav_msg.orientation_rate.pitch = -xsens_msg.calibrated_gyroscope.y
             nav_msg.orientation_rate.yaw = -xsens_msg.calibrated_gyroscope.z
@@ -107,7 +112,7 @@ class Navigation(object):
 
     def handle_reset(self, srv):
         # set origin to where the vehicle is now
-            if srv.request:
+        if srv.request:
             self.origin = self.point_ll
             self.geocentric_radius = R_EARTH
         return BooleanServiceResponse(True)
