@@ -68,8 +68,8 @@ class Navigation(object):
             # WARN: This will cause issues when the system is used close to (0, 0) point (less than 150km)
             # TODO: find a better way to check this - potentially xkf_valid field can inform about this
             rospy.loginfo('%s', xsens_msg.xkf_valid)
-            if not self.origin_set and xsens_msg.xkf_valid:
-            # if not self.origin_set and np.any(self.point_ll > 1):
+            # if not self.origin_set and xsens_msg.xkf_valid:
+            if not self.origin_set and np.any(self.point_ll > 1):
                 self.find_geo_origin(self.point_ll, self.displacement_ne)
 
             nav_msg.origin.latitude = self.origin[0]
