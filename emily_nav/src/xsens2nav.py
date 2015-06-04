@@ -90,7 +90,8 @@ class Navigation(object):
 
             # pose change rate
             # the sign is inverted because of how the sensor is positioned in reference to the boat
-            vel_xyz = np.array([xsens_msg.velocity.x, xsens_msg.velocity.y, xsens_msg.velocity.z, 0, 0, 0])
+            vel_xyz = np.array([xsens_msg.velocity.x, xsens_msg.velocity.y, xsens_msg.velocity.z,
+                                xsens_msg.calibrated_gyroscope.x, xsens_msg.calibrated_gyroscope.y, xsens_msg.calibrated_gyroscope.z])
             J = geo.compute_jacobian(nav_msg.orientation.roll, nav_msg.orientation.pitch, nav_msg.orientation.yaw)
             J_inv = np.linalg.inv(J)
             vel_body = np.dot(J_inv, vel_xyz)
@@ -98,9 +99,9 @@ class Navigation(object):
             nav_msg.body_velocity.x = vel_body[0]
             nav_msg.body_velocity.y = vel_body[1]
             nav_msg.body_velocity.z = vel_body[2]
-            nav_msg.orientation_rate.roll = -xsens_msg.calibrated_gyroscope.x
-            nav_msg.orientation_rate.pitch = -xsens_msg.calibrated_gyroscope.y
-            nav_msg.orientation_rate.yaw = -xsens_msg.calibrated_gyroscope.z
+            nav_msg.orientation_rate.roll = vel_body[3]
+            nav_msg.orientation_rate.pitch = vel_body[4]
+            nav_msg.orientation_rate.yaw = vel_body[5]
 
             # add variances?
 
