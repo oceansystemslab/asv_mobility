@@ -104,3 +104,6 @@ def compute_jacobian(phi, theta, psi):
     J[5, 5] = np.cos(phi) / np.cos(theta)
 
     return J
+
+def wrap_pi(angle):
+    return ((angle + np.pi) % (2*np.pi)) - np.pi

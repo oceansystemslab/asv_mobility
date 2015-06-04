@@ -26,6 +26,10 @@ TOPIC_XSENS = '/imu/xsens'
 SRV_RESET_ORIGIN = '/nav/reset'
 LOOP_RATE = 10  # Hz
 
+SENSOR_ROT_X = np.pi
+SENSOR_ROT_Y = 0
+SENSOR_ROT_Z = 0
+
 class Navigation(object):
     def __init__(self, name, topic_nav):
         self.name = name
@@ -81,12 +85,12 @@ class Navigation(object):
             nav_msg.position.east = self.displacement_ne[1]
             nav_msg.position.depth = 0
             # nav_msg.position.depth = -xsens_msg.position.altitude
-            # values are inverted because of how the sensor is positioned in reference to the boat
-            nav_msg.orientation.roll = np.deg2rad(xsens_msg.orientation_euler.x)
-            nav_msg.orientation.pitch = np.deg2rad(xsens_msg.orientation_euler.y)
-            nav_msg.orientation.yaw = np.deg2rad(xsens_msg.orientation_euler.z)
-
             nav_msg.altitude = xsens_msg.position.altitude
+
+            # corrections applied because of how the sensor is positioned in reference to the boat
+            nav_msg.orientation.roll = geo.wrap_pi(np.deg2rad(xsens_msg.orientation_euler.x) - SENSOR_ROT_Z)
+            nav_msg.orientation.pitch = geo.wrap_pi(np.deg2rad(xsens_msg.orientation_euler.y) - SENSOR_ROT_Z)
+            nav_msg.orientation.yaw = geo.wrap_pi(np.deg2rad(xsens_msg.orientation_euler.z) - SENSOR_ROT_Z)
 
             # pose change rate
             # the sign is inverted because of how the sensor is positioned in reference to the boat
