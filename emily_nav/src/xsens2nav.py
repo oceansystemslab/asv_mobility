@@ -67,7 +67,6 @@ class Navigation(object):
             # if origin is not set yet and we are at least 1 degree away from (0, 0)
             # WARN: This will cause issues when the system is used close to (0, 0) point (less than 150km)
             # TODO: find a better way to check this - potentially xkf_valid field can inform about this
-            rospy.loginfo('%s', xsens_msg.xkf_valid)
             # if not self.origin_set and xsens_msg.xkf_valid:
             if not self.origin_set and np.any(self.point_ll > 1):
                 self.find_geo_origin(self.point_ll, self.displacement_ne)
@@ -82,11 +81,10 @@ class Navigation(object):
             nav_msg.position.east = self.displacement_ne[1]
             nav_msg.position.depth = 0
             # nav_msg.position.depth = -xsens_msg.position.altitude
-
             # values are inverted because of how the sensor is positioned in reference to the boat
-            nav_msg.orientation.roll = -np.deg2rad(xsens_msg.orientation_euler.x)
-            nav_msg.orientation.pitch = -np.deg2rad(xsens_msg.orientation_euler.y)
-            nav_msg.orientation.yaw = -np.deg2rad(xsens_msg.orientation_euler.z)
+            nav_msg.orientation.roll = np.deg2rad(xsens_msg.orientation_euler.x)
+            nav_msg.orientation.pitch = np.deg2rad(xsens_msg.orientation_euler.y)
+            nav_msg.orientation.yaw = np.deg2rad(xsens_msg.orientation_euler.z)
 
             nav_msg.altitude = xsens_msg.position.altitude
 
@@ -109,7 +107,7 @@ class Navigation(object):
 
     def handle_reset(self, srv):
         # set origin to where the vehicle is now
-        if srv.request:
+            if srv.request:
             self.origin = self.point_ll
             self.geocentric_radius = R_EARTH
         return BooleanServiceResponse(True)
