@@ -28,7 +28,7 @@ LOOP_RATE = 10  # Hz
 
 SENSOR_ROT_X = np.pi
 SENSOR_ROT_Y = 0
-SENSOR_ROT_Z = 0
+SENSOR_ROT_Z = np.pi
 
 class Navigation(object):
     def __init__(self, name, topic_nav):
