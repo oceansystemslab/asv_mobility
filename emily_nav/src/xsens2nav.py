@@ -88,8 +88,8 @@ class Navigation(object):
             nav_msg.altitude = xsens_msg.position.altitude
 
             # corrections applied because of how the sensor is positioned in reference to the boat
-            nav_msg.orientation.roll = geo.wrap_pi(np.deg2rad(xsens_msg.orientation_euler.x) - SENSOR_ROT_Z)
-            nav_msg.orientation.pitch = geo.wrap_pi(np.deg2rad(xsens_msg.orientation_euler.y) - SENSOR_ROT_Z)
+            nav_msg.orientation.roll = geo.wrap_pi(np.deg2rad(xsens_msg.orientation_euler.x) - SENSOR_ROT_X)
+            nav_msg.orientation.pitch = geo.wrap_pi(np.deg2rad(xsens_msg.orientation_euler.y) - SENSOR_ROT_Y)
             nav_msg.orientation.yaw = geo.wrap_pi(np.deg2rad(xsens_msg.orientation_euler.z) - SENSOR_ROT_Z)
 
             # pose change rate
