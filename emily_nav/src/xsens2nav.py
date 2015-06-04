@@ -41,7 +41,7 @@ class Navigation(object):
         self.geocentric_radius = R_EARTH
 
         # Subscribers
-        # self.xsens_sub = rospy.Subscriber(TOPIC_XSENS, Xsens, self.handle_xsens)
+        self.xsens_sub = rospy.Subscriber(TOPIC_XSENS, Xsens, self.handle_xsens)
 
         # Publishers
         self.nav_pub = rospy.Publisher(topic_nav, NavSts)
@@ -50,6 +50,7 @@ class Navigation(object):
         self.srv_reset = rospy.Service(SRV_RESET_ORIGIN, BooleanService, self.handle_reset)
 
     def loop(self):
+        # something interesting to do here?
         pass
 
     def handle_xsens(self, xsens_msg):
@@ -65,7 +66,7 @@ class Navigation(object):
 
             # if origin is not set yet and we are at least 1 degree away from (0, 0)
             # WARN: This will cause issues when the system is used close to (0, 0) point (less than 150km)
-            # TODO: find a better way to check this - potentially xkf field can inform about this
+            # TODO: find a better way to check this - potentially xkf_valid field can inform about this
             if not self.origin_set and np.any(self.point_ll > 1):
                 self.find_geo_origin(self.point_ll, self.displacement_ne)
 
