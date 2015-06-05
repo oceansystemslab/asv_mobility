@@ -51,7 +51,7 @@ SENSOR_OFFSET_Z = np.pi
 # to convert from XYZ to NED
 
 J_XYZ = geo.compute_jacobian(np.pi, 0, 0)
-J_XYZ_INV = np.linalg.pinv(J)
+J_XYZ_INV = np.linalg.pinv(J_XYZ)
 
 class Navigation(object):
     def __init__(self, name, topic_nav):
