@@ -11,6 +11,7 @@ import numpy as np
 np.set_printoptions(precision=1, suppress=True)
 
 import geography as geo
+import transformations as tf
 
 # Messages
 from auv_msgs.msg import NavSts
@@ -27,8 +28,8 @@ SRV_RESET_ORIGIN = '/nav/reset'
 LOOP_RATE = 10  # Hz
 
 SENSOR_ROT_X = np.pi
-SENSOR_ROT_Y = 0
-SENSOR_ROT_Z = np.pi
+SENSOR_ROT_Y = np.pi
+SENSOR_ROT_Z = 0
 
 class Navigation(object):
     def __init__(self, name, topic_nav):
@@ -88,17 +89,50 @@ class Navigation(object):
             # nav_msg.position.depth = -xsens_msg.position.altitude
             nav_msg.altitude = xsens_msg.position.altitude
 
-            # IMU returns orientation in NWU, hence pitch and yaw have to be inverted
-            # corrections applied because of how the sensor is positioned in reference to the boat
-            nav_msg.orientation.roll = geo.wrap_pi(np.deg2rad(xsens_msg.orientation_euler.x) - SENSOR_ROT_X)
-            nav_msg.orientation.pitch = geo.wrap_pi(np.deg2rad(xsens_msg.orientation_euler.y) - SENSOR_ROT_Y)
-            nav_msg.orientation.yaw = geo.wrap_pi(np.deg2rad(xsens_msg.orientation_euler.z) - SENSOR_ROT_Z)
+            # # IMU returns orientation in NWU, hence pitch and yaw have to be inverted
+            # # corrections applied because of how the sensor is positioned in reference to the boat
+            # nav_msg.orientation.roll = geo.wrap_pi(np.deg2rad(xsens_msg.orientation_euler.x) - SENSOR_ROT_X)
+            # nav_msg.orientation.pitch = geo.wrap_pi(np.deg2rad(xsens_msg.orientation_euler.y) - SENSOR_ROT_Y)
+            # nav_msg.orientation.yaw = geo.wrap_pi(np.deg2rad(xsens_msg.orientation_euler.z) - SENSOR_ROT_Z)
+            #
+            # # vel_ned is velocity of the sensor in NED Earth fixed reference frame
+            # vel_ned = np.array([xsens_msg.velocity.x, xsens_msg.velocity.y, xsens_msg.velocity.z,
+            #                     xsens_msg.calibrated_gyroscope.x, xsens_msg.calibrated_gyroscope.y, xsens_msg.calibrated_gyroscope.z])
+            #
+            # # apply a rotation knowing the orientation of the boat
+            # J = geo.compute_jacobian(nav_msg.orientation.roll, nav_msg.orientation.pitch, nav_msg.orientation.yaw)
+            # J_inv = np.linalg.inv(J)
+            # vel_body = np.dot(J_inv, vel_ned)
+            #
+            # nav_msg.body_velocity.x = vel_body[0]
+            # nav_msg.body_velocity.y = vel_body[1]
+            # nav_msg.body_velocity.z = vel_body[2]
+            # nav_msg.orientation_rate.roll = -vel_body[3]
+            # nav_msg.orientation_rate.pitch = vel_body[4]
+            # nav_msg.orientation_rate.yaw = -vel_body[5]
+            #
+
+            # IMU returns orientation in NWU
+            orientation = np.array([xsens_msg.orientation_euler.x, xsens_msg.orientation_euler.y, xsens_msg.orientation_euler.z])
+            orientation = np.deg2rad(orientation)
+
+            # Apply rotation to get from sensor_xyz to boat_xyz
+            rot_3d = tf.rotation_matrix(SENSOR_ROT_Y, [0, 1, 0])
+            orientation = np.dot(rot_3d, orientation)
+
+            # Apply rotation to get from boat_xyz to boat_ned
+            rot_3d = tf.rotation_matrix(SENSOR_ROT_X, [1, 0, 0])
+            orientation = np.dot(rot_3d, orientation)
+
+            nav_msg.orientation.roll = orientation[0]
+            nav_msg.orientation.pitch = orientation[1]
+            nav_msg.orientation.yaw = orientation[2]
 
             # vel_ned is velocity of the sensor in NED Earth fixed reference frame
             vel_ned = np.array([xsens_msg.velocity.x, xsens_msg.velocity.y, xsens_msg.velocity.z,
                                 xsens_msg.calibrated_gyroscope.x, xsens_msg.calibrated_gyroscope.y, xsens_msg.calibrated_gyroscope.z])
 
-            # apply a rotation knowing the orientation of the boat
+            # apply a rotation to get from vel_ned to vel_body
             J = geo.compute_jacobian(nav_msg.orientation.roll, nav_msg.orientation.pitch, nav_msg.orientation.yaw)
             J_inv = np.linalg.inv(J)
             vel_body = np.dot(J_inv, vel_ned)
@@ -106,9 +140,9 @@ class Navigation(object):
             nav_msg.body_velocity.x = vel_body[0]
             nav_msg.body_velocity.y = vel_body[1]
             nav_msg.body_velocity.z = vel_body[2]
-            nav_msg.orientation_rate.roll = -vel_body[3]
+            nav_msg.orientation_rate.roll = vel_body[3]
             nav_msg.orientation_rate.pitch = vel_body[4]
-            nav_msg.orientation_rate.yaw = -vel_body[5]
+            nav_msg.orientation_rate.yaw = vel_body[5]
 
             # add variances?
 
