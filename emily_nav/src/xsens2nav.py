@@ -118,13 +118,14 @@ class Navigation(object):
             orientation[0] = np.deg2rad(orientation[0]) - SENSOR_OFFSET_X
             # orientation[1] = np.deg2rad(orientation[1]) - SENSOR_OFFSET_Y)
             orientation[2] = np.deg2rad(orientation[2]) - SENSOR_OFFSET_Z
+            orientation = geo.wrap_pi(orientation)
 
             pose = np.zeros(6)
             pose[3:6] = orientation
 
             # Apply rotation to get from boat_xyz to boat_ned
-            # pose = np.dot(J_XYZ, pose)
-            # orientation = pose[3:6]
+            pose = np.dot(J_XYZ, pose)
+            orientation = pose[3:6]
 
             nav_msg.orientation.roll = orientation[0]
             nav_msg.orientation.pitch = orientation[1]
