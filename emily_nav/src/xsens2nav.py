@@ -115,9 +115,9 @@ class Navigation(object):
             orientation = np.array([xsens_msg.orientation_euler.x, xsens_msg.orientation_euler.y, xsens_msg.orientation_euler.z])
 
             # Apply rotation to get from sensor_xyz to boat_xyz rotation
-            # orientation[0] = np.deg2rad(orientation[0] - SENSOR_OFFSET_X)
-            # orientation[1] = np.deg2rad(orientation[1] - SENSOR_OFFSET_Y)
-            # orientation[2] = np.deg2rad(orientation[2] - SENSOR_OFFSET_Z)
+            orientation[0] = np.deg2rad(orientation[0]) - SENSOR_OFFSET_X
+            # orientation[1] = np.deg2rad(orientation[1]) - SENSOR_OFFSET_Y)
+            orientation[2] = np.deg2rad(orientation[2]) - SENSOR_OFFSET_Z
 
             pose = np.zeros(6)
             pose[3:6] = orientation
