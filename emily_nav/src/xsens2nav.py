@@ -116,7 +116,7 @@ class Navigation(object):
 
             # Apply rotation to get from sensor_xyz to boat_xyz rotation
             orientation[0] = np.deg2rad(orientation[0]) - SENSOR_OFFSET_X
-            # orientation[1] = np.deg2rad(orientation[1]) - SENSOR_OFFSET_Y)
+            orientation[1] = np.deg2rad(orientation[1]) - SENSOR_OFFSET_Y
             orientation[2] = np.deg2rad(orientation[2]) - SENSOR_OFFSET_Z
             orientation = geo.wrap_pi(orientation)
 
