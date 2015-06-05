@@ -111,7 +111,7 @@ class Navigation(object):
             # nav_msg.position.depth = -xsens_msg.position.altitude
             nav_msg.altitude = xsens_msg.position.altitude
 
-            # IMU returns orientation in NWU
+            # IMU returns rotation from NWU in degrees
             orientation = np.array([xsens_msg.orientation_euler.x, xsens_msg.orientation_euler.y, xsens_msg.orientation_euler.z])
 
             # Apply rotation to get from sensor_xyz to boat_xyz rotation
@@ -124,7 +124,7 @@ class Navigation(object):
             pose[3:6] = orientation
 
             # Apply rotation to get from boat_xyz to boat_ned
-            pose = np.dot(J_XYZ, pose)
+            pose = np.dot(J_XYZ_INV, pose)
             orientation = pose[3:6]
 
             nav_msg.orientation.roll = orientation[0]
