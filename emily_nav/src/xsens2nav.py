@@ -8,6 +8,7 @@ roslib.load_manifest('emily_nav')
 
 import rospy
 import numpy as np
+from numpy import sin, cos
 np.set_printoptions(precision=1, suppress=True)
 
 import geography as geo
@@ -27,9 +28,16 @@ TOPIC_XSENS = '/imu/xsens'
 SRV_RESET_ORIGIN = '/nav/reset'
 LOOP_RATE = 10  # Hz
 
-SENSOR_ROT_X = np.pi
-SENSOR_ROT_Y = np.pi
-SENSOR_ROT_Z = 0
+ROT_X = np.pi
+ROT_XYZ2NED = np.array([[1, 0, 0],
+                       [0, cos(ROT_X), -sin(ROT_X)],
+                       [0, sin(ROT_X), cos(ROT_X)]])
+
+ROT_Y = np.pi
+ROT_SENS2BOAT_X = np.array([[cos(ROT_Y), 0, sin(ROT_Y)],
+                           [0, 1, 0],
+                           [-sin(ROT_Y), 0, cos(ROT_Y)]])
+
 
 class Navigation(object):
     def __init__(self, name, topic_nav):
@@ -117,12 +125,10 @@ class Navigation(object):
             orientation = np.deg2rad(orientation)
 
             # Apply rotation to get from sensor_xyz to boat_xyz
-            rot_3d = tf.rotation_matrix(SENSOR_ROT_Y, [0, 1, 0])
-            orientation = np.dot(rot_3d, orientation)
+            orientation = np.dot(ROT_SENS2BOAT_X, orientation)
 
             # Apply rotation to get from boat_xyz to boat_ned
-            rot_3d = tf.rotation_matrix(SENSOR_ROT_X, [1, 0, 0])
-            orientation = np.dot(rot_3d, orientation)
+            orientation = np.dot(ROT_XYZ2NED, orientation)
 
             nav_msg.orientation.roll = orientation[0]
             nav_msg.orientation.pitch = orientation[1]
