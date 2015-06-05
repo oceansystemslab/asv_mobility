@@ -19,7 +19,7 @@ from vehicle_interface.srv import BooleanService, BooleanServiceResponse
 # xsens message
 
 # Constants
-R_EARTH = 6371000  # metres - average radius
+R_EARTH = 6371000  # metres - average radius of Earth
 
 TOPIC_NAV = '/nav/nav_sts/new'
 TOPIC_XSENS = '/imu/xsens'
@@ -40,6 +40,7 @@ class Navigation(object):
         self.origin_set = False
         #
         self.origin = np.zeros(2)  # [latitude, longitude] in radians
+
         # Distance to the centre of the Earth at given latitude assuming elipsoidal model of Earth.
         # If latitude is not known assume Earth is a sphere.
         self.geocentric_radius = R_EARTH
@@ -54,7 +55,7 @@ class Navigation(object):
         self.srv_reset = rospy.Service(SRV_RESET_ORIGIN, BooleanService, self.handle_reset)
 
     def loop(self):
-        # something interesting to do here?
+        # something to do here?
         pass
 
     def handle_xsens(self, xsens_msg):
@@ -71,7 +72,7 @@ class Navigation(object):
             # if origin is not set yet and we are at least 1 degree away from (0, 0)
             # WARN: This will cause issues when the system is used close to (0, 0) point (less than 150km)
             # TODO: find a better way to check this - potentially xkf_valid field can inform about this
-            # if not self.origin_set and xsens_msg.xkf_valid:
+            # if not self.origin_set and xsens_msg.xkf_valid: - not reliable
             if not self.origin_set and np.any(self.point_ll > 1):
                 self.find_geo_origin(self.point_ll, self.displacement_ne)
 
@@ -87,25 +88,27 @@ class Navigation(object):
             # nav_msg.position.depth = -xsens_msg.position.altitude
             nav_msg.altitude = xsens_msg.position.altitude
 
+            # IMU returns orientation in NWU, hence pitch and yaw have to be inverted
             # corrections applied because of how the sensor is positioned in reference to the boat
             nav_msg.orientation.roll = geo.wrap_pi(np.deg2rad(xsens_msg.orientation_euler.x) - SENSOR_ROT_X)
             nav_msg.orientation.pitch = geo.wrap_pi(np.deg2rad(xsens_msg.orientation_euler.y) - SENSOR_ROT_Y)
             nav_msg.orientation.yaw = geo.wrap_pi(np.deg2rad(xsens_msg.orientation_euler.z) - SENSOR_ROT_Z)
 
-            # pose change rate
-            # the sign is inverted because of how the sensor is positioned in reference to the boat
-            vel_xyz = np.array([xsens_msg.velocity.x, xsens_msg.velocity.y, xsens_msg.velocity.z,
+            # vel_ned is velocity of the sensor in NED Earth fixed reference frame
+            vel_ned = np.array([xsens_msg.velocity.x, xsens_msg.velocity.y, xsens_msg.velocity.z,
                                 xsens_msg.calibrated_gyroscope.x, xsens_msg.calibrated_gyroscope.y, xsens_msg.calibrated_gyroscope.z])
+
+            # apply a rotation knowing the orientation of the boat
             J = geo.compute_jacobian(nav_msg.orientation.roll, nav_msg.orientation.pitch, nav_msg.orientation.yaw)
             J_inv = np.linalg.inv(J)
-            vel_body = np.dot(J_inv, vel_xyz)
+            vel_body = np.dot(J_inv, vel_ned)
 
             nav_msg.body_velocity.x = vel_body[0]
             nav_msg.body_velocity.y = vel_body[1]
             nav_msg.body_velocity.z = vel_body[2]
-            nav_msg.orientation_rate.roll = vel_body[3]
+            nav_msg.orientation_rate.roll = -vel_body[3]
             nav_msg.orientation_rate.pitch = vel_body[4]
-            nav_msg.orientation_rate.yaw = vel_body[5]
+            nav_msg.orientation_rate.yaw = -vel_body[5]
 
             # add variances?
 
