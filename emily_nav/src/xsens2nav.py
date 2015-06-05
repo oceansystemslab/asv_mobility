@@ -49,8 +49,9 @@ SENSOR_OFFSET_Z = np.pi
 #                       [0, 0, 1]])
 
 # to convert from XYZ to NED
-J = geo.compute_jacobian(np.pi, 0, 0)
-J_INV = np.linalg.pinv(J)
+
+J_XYZ = geo.compute_jacobian(np.pi, 0, 0)
+J_XYZ_INV = np.linalg.pinv(J)
 
 class Navigation(object):
     def __init__(self, name, topic_nav):
@@ -122,7 +123,7 @@ class Navigation(object):
             pose[3:6] = orientation
 
             # Apply rotation to get from boat_xyz to boat_ned
-            pose = np.dot(J_INV, pose)
+            pose = np.dot(J_XYZ, pose)
             orientation = pose[3:6]
 
             nav_msg.orientation.roll = orientation[0]
