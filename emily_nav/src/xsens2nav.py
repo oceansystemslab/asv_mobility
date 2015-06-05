@@ -28,22 +28,25 @@ TOPIC_XSENS = '/imu/xsens'
 SRV_RESET_ORIGIN = '/nav/reset'
 LOOP_RATE = 10  # Hz
 
-SENSOR_OFFSET_Y = np.pi
+SENSOR_OFFSET_X = np.pi
+SENSOR_OFFSET_Y = 0
+SENSOR_OFFSET_Z = np.pi
 
-ANGLE_X = np.pi
-ROT_X = np.array([[1, 0, 0],
-                       [0, cos(ANGLE_X), -sin(ANGLE_X)],
-                       [0, sin(ANGLE_X), cos(ANGLE_X)]])
 
-ANGLE_Y = np.pi
-ROT_Y = np.array([[cos(ANGLE_Y), 0, sin(ANGLE_Y)],
-                           [0, 1, 0],
-                           [-sin(ANGLE_Y), 0, cos(ANGLE_Y)]])
-
-ANGLE_Z = np.pi
-ROT_Z = np.array([[cos(ANGLE_Z), -sin(ANGLE_Z), 0],
-                      [sin(ANGLE_Z), cos(ANGLE_Z), 0],
-                      [0, 0, 1]])
+# ANGLE_X = np.pi
+# ROT_X = np.array([[1, 0, 0],
+#                        [0, cos(ANGLE_X), -sin(ANGLE_X)],
+#                        [0, sin(ANGLE_X), cos(ANGLE_X)]])
+#
+# ANGLE_Y = np.pi
+# ROT_Y = np.array([[cos(ANGLE_Y), 0, sin(ANGLE_Y)],
+#                            [0, 1, 0],
+#                            [-sin(ANGLE_Y), 0, cos(ANGLE_Y)]])
+#
+# ANGLE_Z = np.pi
+# ROT_Z = np.array([[cos(ANGLE_Z), -sin(ANGLE_Z), 0],
+#                       [sin(ANGLE_Z), cos(ANGLE_Z), 0],
+#                       [0, 0, 1]])
 
 # to convert from XYZ to NED
 J = geo.compute_jacobian(np.pi, 0, 0)
@@ -110,8 +113,10 @@ class Navigation(object):
             # IMU returns orientation in NWU
             orientation = np.array([xsens_msg.orientation_euler.x, xsens_msg.orientation_euler.y, xsens_msg.orientation_euler.z])
 
-            # Apply rotation to get from sensor_xyz to boat_xyz
+            # Apply rotation to get from sensor_xyz to boat_xyz rotation
+            orientation[0] = np.deg2rad(orientation[0] - SENSOR_OFFSET_X)
             orientation[1] = np.deg2rad(orientation[1] - SENSOR_OFFSET_Y)
+            orientation[2] = np.deg2rad(orientation[2] - SENSOR_OFFSET_Z)
 
             pose = np.zeros(6)
             pose[3:6] = orientation
