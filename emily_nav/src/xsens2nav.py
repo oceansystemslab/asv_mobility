@@ -28,15 +28,20 @@ TOPIC_XSENS = '/imu/xsens'
 SRV_RESET_ORIGIN = '/nav/reset'
 LOOP_RATE = 10  # Hz
 
-ROT_X = np.pi
-ROT_XYZ2NED = np.array([[1, 0, 0],
-                       [0, cos(ROT_X), -sin(ROT_X)],
-                       [0, sin(ROT_X), cos(ROT_X)]])
+ANGLE_X = np.pi
+ROT_X = np.array([[1, 0, 0],
+                       [0, cos(ANGLE_X), -sin(ANGLE_X)],
+                       [0, sin(ANGLE_X), cos(ANGLE_X)]])
 
-ROT_Y = np.pi
-ROT_SENS2BOAT_X = np.array([[cos(ROT_Y), 0, sin(ROT_Y)],
+ANGLE_Y = np.pi
+ROT_Y = np.array([[cos(ANGLE_Y), 0, sin(ANGLE_Y)],
                            [0, 1, 0],
-                           [-sin(ROT_Y), 0, cos(ROT_Y)]])
+                           [-sin(ANGLE_Y), 0, cos(ANGLE_Y)]])
+
+ANGLE_Z = np.pi
+ROT_Z = np.array([[cos(ANGLE_Z), -sin(ANGLE_Z), 0],
+                      [sin(ANGLE_Z), cos(ANGLE_Z), 0],
+                      [0, 0, 1]])
 
 
 class Navigation(object):
@@ -125,10 +130,11 @@ class Navigation(object):
             orientation = np.deg2rad(orientation)
 
             # Apply rotation to get from sensor_xyz to boat_xyz
-            orientation = np.dot(ROT_SENS2BOAT_X, orientation)
+            orientation = np.dot(ROT_X, orientation)
+            orientation[0] -= np.pi
 
             # Apply rotation to get from boat_xyz to boat_ned
-            orientation = np.dot(ROT_XYZ2NED, orientation)
+            orientation = np.dot(ROT_X, orientation)
 
             nav_msg.orientation.roll = orientation[0]
             nav_msg.orientation.pitch = orientation[1]
