@@ -8,11 +8,9 @@ roslib.load_manifest('emily_nav')
 
 import rospy
 import numpy as np
-from numpy import sin, cos
 np.set_printoptions(precision=1, suppress=True)
 
-import geography as geo
-import transformations as tf
+import frame_maths as frame
 
 # Messages
 from auv_msgs.msg import NavSts
@@ -28,30 +26,7 @@ TOPIC_XSENS = '/imu/xsens'
 SRV_RESET_ORIGIN = '/nav/reset'
 LOOP_RATE = 10  # Hz
 
-SENSOR_OFFSET_X = np.pi
-SENSOR_OFFSET_Y = 0
-SENSOR_OFFSET_Z = np.pi
-
-
-# ANGLE_X = np.pi
-# ROT_X = np.array([[1, 0, 0],
-#                        [0, cos(ANGLE_X), -sin(ANGLE_X)],
-#                        [0, sin(ANGLE_X), cos(ANGLE_X)]])
-#
-# ANGLE_Y = np.pi
-# ROT_Y = np.array([[cos(ANGLE_Y), 0, sin(ANGLE_Y)],
-#                            [0, 1, 0],
-#                            [-sin(ANGLE_Y), 0, cos(ANGLE_Y)]])
-#
-# ANGLE_Z = np.pi
-# ROT_Z = np.array([[cos(ANGLE_Z), -sin(ANGLE_Z), 0],
-#                       [sin(ANGLE_Z), cos(ANGLE_Z), 0],
-#                       [0, 0, 1]])
-
-# to convert from XYZ to NED
-
-J_XYZ = geo.compute_jacobian(np.pi, 0, 0)
-J_XYZ_INV = np.linalg.pinv(J_XYZ)
+SENSOR_ANGLE_OFFSETS = np.array([np.pi, 0, np.pi])
 
 class Navigation(object):
     def __init__(self, name, topic_nav):
@@ -61,7 +36,6 @@ class Navigation(object):
         self.displacement_ne = np.zeros(2)
 
         self.origin_set = False
-        #
         self.origin = np.zeros(2)  # [latitude, longitude] in radians
 
         # Distance to the centre of the Earth at given latitude assuming elipsoidal model of Earth.
@@ -102,7 +76,7 @@ class Navigation(object):
             nav_msg.origin.latitude = self.origin[0]
             nav_msg.origin.longitude = self.origin[1]
 
-            self.displacement_ne = geo.geo2ne(self.point_ll, self.origin, self.geocentric_radius)
+            self.displacement_ne = frame.geo2ne(self.point_ll, self.origin, self.geocentric_radius)
 
             # pose
             nav_msg.position.north = self.displacement_ne[0]
@@ -112,33 +86,31 @@ class Navigation(object):
             nav_msg.altitude = xsens_msg.position.altitude
 
             # IMU returns rotation from NWU in degrees
-            orientation = np.array([xsens_msg.orientation_euler.x, xsens_msg.orientation_euler.y, xsens_msg.orientation_euler.z])
+            orient_xyz = np.array([xsens_msg.orientation_euler.x, xsens_msg.orientation_euler.y, xsens_msg.orientation_euler.z])
+            orient_xyz = np.deg2rad(orient_xyz)
 
             # Apply rotation to get from sensor_xyz to boat_xyz rotation
-            orientation[0] = np.deg2rad(orientation[0]) - SENSOR_OFFSET_X
-            orientation[1] = np.deg2rad(orientation[1]) - SENSOR_OFFSET_Y
-            orientation[2] = np.deg2rad(orientation[2]) - SENSOR_OFFSET_Z
-            orientation = geo.wrap_pi(orientation)
-
-            pose = np.zeros(6)
-            pose[3:6] = orientation
+            orient_xyz = frame.wrap_pi(orient_xyz - SENSOR_ANGLE_OFFSETS)
 
             # Apply rotation to get from boat_xyz to boat_ned
-            pose = np.dot(J_XYZ_INV, pose)
-            orientation = pose[3:6]
+            orient_ned = frame.angle_xyz2ned(orient_xyz)
 
-            nav_msg.orientation.roll = orientation[0]
-            nav_msg.orientation.pitch = orientation[1]
-            nav_msg.orientation.yaw = orientation[2]
+            nav_msg.orientation.roll = orient_ned[0]
+            nav_msg.orientation.pitch = orient_ned[1]
+            nav_msg.orientation.yaw = orient_ned[2]
+
+            # orientation rate is specified in XYZ frame
+            orient_rate_xyz = np.array([xsens_msg.calibrated_gyroscope.x,
+                                        xsens_msg.calibrated_gyroscope.y,
+                                        xsens_msg.calibrated_gyroscope.z])
+
+            orient_rate_ned = frame.angle_xyz2ned(orient_rate_xyz)
 
             # vel_ned is velocity of the sensor in NED Earth fixed reference frame
-            vel_ned = np.array([xsens_msg.velocity.x, xsens_msg.velocity.y, xsens_msg.velocity.z,
-                                xsens_msg.calibrated_gyroscope.x, xsens_msg.calibrated_gyroscope.y, xsens_msg.calibrated_gyroscope.z])
+            vel_ned = np.array([xsens_msg.velocity.x, xsens_msg.velocity.y, xsens_msg.velocity.z])
 
             # apply a rotation to get from vel_ned to vel_body
-            J = geo.compute_jacobian(nav_msg.orientation.roll, nav_msg.orientation.pitch, nav_msg.orientation.yaw)
-            J_inv = np.linalg.inv(J)
-            vel_body = np.dot(J_inv, vel_ned)
+            vel_body = frame.eta_world2body(vel_ned, orient_rate_ned, orient_ned)
 
             nav_msg.body_velocity.x = vel_body[0]
             nav_msg.body_velocity.y = vel_body[1]
@@ -169,12 +141,12 @@ class Navigation(object):
         :param point_ll: current position on Earth in spherical reference frame
         :param displacement_ne: current position in ne reference (displacement from where sensor was started)
         """
-        radius = geo.compute_geocentric_radius(point_ll[0])
+        radius = frame.compute_geocentric_radius(point_ll[0])
 
         # NOTE: negative sign - that is because we want to look in the direction of origin
-        self.origin = geo.ne2geo(-displacement_ne, point_ll, radius)
+        self.origin = frame.ne2geo(-displacement_ne, point_ll, radius)
         # find the radius corresponding to the new origin
-        self.geocentric_radius = geo.compute_geocentric_radius(self.origin[0])
+        self.geocentric_radius = frame.compute_geocentric_radius(self.origin[0])
         self.origin_set = True
 
 

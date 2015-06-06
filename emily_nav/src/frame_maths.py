@@ -6,6 +6,7 @@ import numpy as np
 # Constants
 A_EARTH = 6378137.0  # metres - semi-major axis - assumes elipsoidal model of Earth
 B_EARTH = 6356752.3  # metres - semi-minor axis - assumes elipsoidal model of Earth
+SENSOR_ORIENT = np.array([np.pi, 0, np.pi])
 
 def compute_geocentric_radius(latitude):
     """Finds distance to the centre of the Earth at the specified latitude. Refer to Wikipedia page:
@@ -18,6 +19,7 @@ def compute_geocentric_radius(latitude):
     radius = np.sqrt(((A_EARTH**2 * np.cos(lat))**2 + (B_EARTH**2 * np.sin(lat))**2) /
                      ((A_EARTH * np.cos(lat))**2 + (B_EARTH * np.sin(lat))**2))
     return radius
+
 
 def geo2ne(point_ll, reference, geocentric_radius):
     """Given a point (latitude, longitude) and an origin the function returns a distance in n and e directions
@@ -47,6 +49,7 @@ def geo2ne(point_ll, reference, geocentric_radius):
 
     return displacement_ne
 
+
 def ne2geo(displacement_ne, reference, geocentric_radius):
     """Inverse of geo2ne(). Given a reference (latitude, longitude) and ne distance the function finds
     a point (latitude, longitude) displacement_ne away from the reference.
@@ -66,6 +69,7 @@ def ne2geo(displacement_ne, reference, geocentric_radius):
     point_ll = np.array([reference[0] + np.rad2deg(delta_lat), reference[1] + np.rad2deg(delta_long)])
 
     return point_ll
+
 
 def compute_jacobian(phi, theta, psi):
     """This functions computes the jacobian matrix used for converting body-frame to earth-frame coordinates.
@@ -105,5 +109,54 @@ def compute_jacobian(phi, theta, psi):
 
     return J
 
+
+ORIENT_NED_IN_XYZ = np.array([np.pi, 0, 0])
+J_NED_IN_XYZ = compute_jacobian(*ORIENT_NED_IN_XYZ)
+J_NED_IN_XYZ_INV = np.linalg.pinv(J_NED_IN_XYZ)
+def angle_xyz2ned(orient_vehicle_xyz):
+    """Converts an angle expressed in xyz frame to ned frame.
+
+    :param orient_vehicle_xyz: [roll pitch theta] in radians
+    :return: [roll pitch theta] in radians in ned frame
+    """
+
+    vehicle_orient_ned = np.dot(J_NED_IN_XYZ_INV[3:6, 3:6], orient_vehicle_xyz)
+    return vehicle_orient_ned
+
+
+def eta_world2body(vel_ned, orient_rate_ned, vehicle_orient_ned):
+    """Converts velocity and orientation rate in world frame to body frame.
+
+    :param vel_ned: linear velocities in world ned frame
+    :param orient_rate_ned: angular velocities in world ned frame in radians
+    :param vehicle_orient_ned: orientation of the body with respect to the world frame
+    :return: velocities in body frame
+    """
+    vel_ned_full = np.concatenate([vel_ned, orient_rate_ned])
+
+    J = compute_jacobian(*vehicle_orient_ned)
+    J_inv = np.linalg.pinv(J)
+
+    vel_body = np.dot(J_inv, vel_ned_full)
+    return vel_body
+
+
 def wrap_pi(angle):
     return ((angle + np.pi) % (2*np.pi)) - np.pi
+
+if __name__ == "__main__":
+    # rotations demo
+    sensor_read = np.array([np.pi, 0, np.pi])
+    print "Sensor reading: ", sensor_read
+    veh_orient_xyz = sensor_read - SENSOR_ORIENT
+    print "Vehicle orient in xyz: ", veh_orient_xyz
+    veh_orient_ned = angle_xyz2ned(veh_orient_xyz)
+    print "Vehicle orient in ned: ", veh_orient_ned, '\n'
+
+    sensor_read = np.array([np.pi, 0, np.pi+0.1])
+    print "Sensor reading: ", sensor_read
+    veh_orient_xyz = sensor_read - SENSOR_ORIENT
+    print "Vehicle orient in xyz: ", veh_orient_xyz
+    veh_orient_ned = angle_xyz2ned(veh_orient_xyz)
+    print "Vehicle orient in ned: ", veh_orient_ned, '\n'
+
