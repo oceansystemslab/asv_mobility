@@ -4,10 +4,9 @@
      pololu_driver
 
   </description>
-  <author>SEEBYTE EMILY</author>
+  <author>Marian Andrecki</author>
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
-  <url>http://ros.org/wiki/pololu_driver</url>
   <depend package="rospy"/>
   <depend package="vehicle_interface"/>
 
