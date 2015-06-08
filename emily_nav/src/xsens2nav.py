@@ -86,14 +86,14 @@ class Navigation(object):
             nav_msg.altitude = xsens_msg.position.altitude
 
             # IMU returns rotation from NWU in degrees
-            orient_xyz = np.array([xsens_msg.orientation_euler.x, xsens_msg.orientation_euler.y, xsens_msg.orientation_euler.z])
-            orient_xyz = np.deg2rad(orient_xyz)
+            orient_ned = np.array([xsens_msg.orientation_euler.x, xsens_msg.orientation_euler.y, xsens_msg.orientation_euler.z])
+            orient_ned = np.deg2rad(orient_ned)
 
             # Apply rotation to get from sensor_xyz to boat_xyz rotation
-            orient_xyz = frame.wrap_pi(orient_xyz - SENSOR_ANGLE_OFFSETS)
+            # orient_xyz = frame.wrap_pi(orient_xyz - SENSOR_ANGLE_OFFSETS)
 
             # Apply rotation to get from boat_xyz to boat_ned
-            orient_ned = frame.angle_xyz2ned(orient_xyz)
+            # orient_ned = frame.angle_xyz2ned(orient_xyz)
 
             nav_msg.orientation.roll = orient_ned[0]
             nav_msg.orientation.pitch = orient_ned[1]
