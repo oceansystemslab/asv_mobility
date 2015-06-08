@@ -1,0 +1,7 @@
+<launch>
+
+    <!-- uwsim -->
+    <!--not operational yet-->
+    <node name="uwsim" pkg="uwsim" type="uwsim" args="--dataPath $(find asv_pilot) --configfile $(find asv_pilot)/data/wavetank.xml" output="screen"/>
+
+</launch>

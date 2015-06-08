@@ -13,8 +13,4 @@
         <rosparam command="load" file="$(find asv_pilot)/conf/pid_sim.yaml" />
     </node>
 
-    <!-- start the nav and imu -->
-	<include file="$(find emily)/launch/imu.launch"/>
-	<include file="$(find emily)/launch/nav.launch"/>
-
 </launch>
