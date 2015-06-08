@@ -1,10 +1,10 @@
 <launch>
 
     <!-- rviz -->
-    <!--<node name="rviz" pkg="rviz" type="rviz" args="-d $(find asv_pilot)/conf/nav_sim.rviz"/>-->
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find asv_pilot)/conf/nav_sim.rviz"/>
 
     <!-- uwsim -->
-    <node name="uwsim" pkg="uwsim" type="uwsim" args="--dataPath $(find asv_pilot) --configfile $(find asv_pilot)/data/wavetank.xml" output="screen"/>
+    <!--<node name="uwsim" pkg="uwsim" type="uwsim" args="&#45;&#45;dataPath $(find asv_pilot) &#45;&#45;configfile $(find asv_pilot)/data/wavetank.xml" output="screen"/>-->
 
 
 </launch>
