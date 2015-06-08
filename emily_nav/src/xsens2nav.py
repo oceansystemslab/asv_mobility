@@ -105,14 +105,11 @@ class Navigation(object):
             nav_msg.orientation.yaw = orient_ned[2]
 
             # orientation rate is specified in XYZ frame
-            # orient_rate_xyz = np.array([xsens_msg.calibrated_gyroscope.x,
-            #                             xsens_msg.calibrated_gyroscope.y,
-            #                             xsens_msg.calibrated_gyroscope.z])
-            orient_rate_ned = np.array([xsens_msg.calibrated_gyroscope.x,
+            orient_rate_xyz = np.array([xsens_msg.calibrated_gyroscope.x,
                                         xsens_msg.calibrated_gyroscope.y,
                                         xsens_msg.calibrated_gyroscope.z])
 
-            # orient_rate_ned = frame.angle_xyz2ned(orient_rate_xyz)
+            orient_rate_ned = frame.angle_xyz2ned(orient_rate_xyz)
 
             # vel_ned is velocity of the sensor in NED Earth fixed reference frame
             vel_ned = np.array([xsens_msg.velocity.x, xsens_msg.velocity.y, xsens_msg.velocity.z])
@@ -123,8 +120,8 @@ class Navigation(object):
             nav_msg.body_velocity.x = vel_body[0]
             nav_msg.body_velocity.y = vel_body[1]
             nav_msg.body_velocity.z = vel_body[2]
-            nav_msg.orientation_rate.roll = vel_body[3]
-            nav_msg.orientation_rate.pitch = vel_body[4]
+            nav_msg.orientation_rate.roll = -vel_body[3]
+            nav_msg.orientation_rate.pitch = -vel_body[4]
             nav_msg.orientation_rate.yaw = vel_body[5]
 
             # add variances?
