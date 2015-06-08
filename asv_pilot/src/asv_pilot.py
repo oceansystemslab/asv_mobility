@@ -87,7 +87,9 @@ class Pilot(object):
 
         self.last_nav_t = 0
         self.nav_switch = False
-        self.pilot_enable = False
+
+        # TODO: pilot_enable to False by default once tests are over
+        self.pilot_enable = True
         self.simulation = simulation
 
         self.controller = ctrl.Controller(1/LOOP_RATE)

@@ -28,18 +28,21 @@ Requirements
   - Python 2.7+
   - Numpy 1.8+
 
+TODOs:
+-------------
+  - Prepare launch files which allow for running Emily and Nessie at the same time.
+
 Run Simulator
----
+-------------
 
 1) Run emily with an AUV simulator (note that this models Emily is an underwater vehicle) with Emily's thruster simulator and controller:
   ```
   roslaunch asv_pilot sim.launch
   ```
 
-2) Run visualization - rviz or UWSim
+2) Run visualization - rviz (UWSim unavailable yet)
   ```
   roslaunch asv_pilot rviz.launch
-  roslaunch asv_pilot uwsim.launch
   ```
   
 3) Enable the vehicle pilot (for safety the pilot is not sending thruster commands if not enabled by the user):
