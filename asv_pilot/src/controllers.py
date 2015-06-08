@@ -4,7 +4,7 @@ from __future__ import division
 import numpy as np
 np.set_printoptions(precision=2, suppress=True)
 
-from emily_physics import update_jacobian
+from frame_maths import update_jacobian, wrap_pi
 
 MAX_THROTTLE = 100
 MAX_RUDDER = 100
@@ -19,21 +19,9 @@ TURNING_SPEED = 1  # m/s
 MAX_SPEED = 2.5
 MAX_E_X_I = 0.5
 
-
-# RUDDER_POS_X = 0.4  # distance from the centre of mass
-# # Rudder is at angle 0 for throttle 0, and at position 0.4 for throttle 100.
-# RUDDER_ANGLE_MAX = 0.4  # in radians (23 degrees).
-# MAX_LINEAR_FORCE = 100  # for every linear component (not in Newtons)
-# MAX_TORQUE = MAX_LINEAR_FORCE * RUDDER_POS_X * np.sin(RUDDER_ANGLE_MAX)
-
-def wrap_pi(angle):
-    return ((angle + np.pi) % (2*np.pi)) - np.pi
-
 POINT_SHOOT = 'point_shoot'
 CASCADED_PID = 'cascaded_pid'
 VELOCITY_CTRL = 'velocity_ctrl'
-
-
 
 class Controller(object):
     def __init__(self, period):
@@ -99,7 +87,7 @@ class Controller(object):
         self.ev_d[0:n] = 0
 
     def evaluate_control(self):
-        """
+        """Evaluate the current control policy.
 
         :return: a set of throttles (motor and rudder throttles) according to the control policy specified by the mode.
         """
@@ -124,6 +112,7 @@ class Controller(object):
             self.mode = mode
 
     def request_pose(self, req_pose):
+        # TODO: only one should be used ultimately
         self.req_pose = req_pose
         self.des_pose = req_pose
 
@@ -168,7 +157,7 @@ class Controller(object):
 
         self.ev_d = (self.ev_p - self.prev_ev_p)/self.dt
 
-        # TODO: decide
+        # TODO: decide if below should be used
         # not reasonable to keep it on velocity (maybe on yaw its ok)
         # changed_sign = (np.sign(self.ev_p) != np.sign(self.prev_ev_p))
         # self.ev_i[changed_sign] = 0
@@ -210,7 +199,6 @@ class Controller(object):
 
         # compute thruster throttle
         # if the vehicle is pointed in the right direction
-
         distance = np.linalg.norm(error_xy)
 
         if distance < STOPPING_THR:

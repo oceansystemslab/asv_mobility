@@ -4,10 +4,10 @@
      asv_pilot
 
   </description>
-  <author>SEEBYTE EMILY</author>
+  <author>Marian Andrecki</author>
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
-  <url>http://ros.org/wiki/asv_pilot</url>
+  <depend package="emily_nav"/>
   <depend package="vehicle_interface"/>
   <depend package="auv_msgs"/>
   <depend package="nav_msgs"/>

@@ -7,36 +7,33 @@ roslib.load_manifest('asv_pilot')
 
 import rospy
 import numpy as np
-np.set_printoptions(precision=1, suppress=True)
+np.set_printoptions(precision=2, suppress=True)
 # import sys
 
-
-from transformations import euler_from_quaternion
 import controllers as ctrl
 
 # Messages
 from vehicle_interface.msg import PilotRequest, ThrusterCommand
-from nav_msgs.msg import Odometry
 from auv_msgs.msg import NavSts
 from vehicle_interface.srv import BooleanService, BooleanServiceResponse
 
 # Constants
 TOPIC_THROTTLE = '/motors/throttle'
-TOPIC_ODOMETRY = '/nav/odometry'
 TOPIC_REQUEST = '/pilot/position_req'
 TOPIC_NAV = '/nav/nav_sts'
 SRV_SWITCH = '/pilot/switch'
 SRV_PID_CONFIG = '/pilot/pid_config'
-ODOMETRY_TIMEOUT = 5  # seconds
+NAVIGATION_TIMEOUT = 5  # seconds
 LOOP_RATE = 10  # Hz
 SIMULATION = False
 
 class Pilot(object):
     """Node provides an interface between control logic and ROS. This node outputs throttle commands that can be
-     consumed either by pololu_driver or thruster_sim. The controller will not run if fresh odometry
+     consumed either by pololu_driver or thruster_sim. The controller will not run if fresh navigation
      information is not available. The controller can be enabled or disabled via service.
-     Generally, the asv has two degrees of freedom: surge and yaw. They are coupled - that is the boat cannot yaw
-     without moving forward.
+     Generally, the asv has two degrees of freedom: surge and yaw. They are coupled - that is, the boat cannot yaw
+     without thrusting forward (note that this means limited steering when slowing down).
+
      Different control policies:
         - point and shoot - simple P controller on position (distance to goal and orientation towards the goal).
         - cascaded pid - PID position controller outputs a desired velocity, then PID velocity controller attempts to
@@ -51,8 +48,8 @@ class Pilot(object):
         self.vel = np.zeros(6)
         self.des_pose = np.zeros(6)
 
-        self.last_odometry_t = 0
-        self.odometry_switch = False
+        self.last_nav_t = 0
+        self.nav_switch = False
         self.pilot_enable = True
         self.simulation = simulation
 
@@ -66,8 +63,7 @@ class Pilot(object):
             self.nav_sub = rospy.Subscriber(TOPIC_NAV, NavSts, self.handle_sim_nav)
             rospy.loginfo('Using NavSts from simulation (simulation).')
         else:
-            self.odometry_sub = rospy.Subscriber(TOPIC_ODOMETRY, Odometry, self.handle_odometry)
-            # self.nav_sub = rospy.Subscriber(TOPIC_NAV, NavSts, self.handle_real_nav)
+            self.nav_sub = rospy.Subscriber(TOPIC_NAV, NavSts, self.handle_real_nav)
             rospy.loginfo('Using NavSts from vehicle (real run).')
 
         # Publishers
@@ -78,57 +74,39 @@ class Pilot(object):
         self.srv_pid_config = rospy.Service(SRV_PID_CONFIG, BooleanService, self.handle_pid_config)
 
     def loop(self):
+        throttle = np.zeros(6)
         # if message is old and throttle is non-zero then set to zero
-        if (rospy.Time.now().to_sec() - self.last_odometry_t) > ODOMETRY_TIMEOUT and self.odometry_switch:
-            self.odometry_switch = False
+        if (rospy.Time.now().to_sec() - self.last_nav_t) > NAVIGATION_TIMEOUT and self.nav_switch:
+            self.nav_switch = False
             rospy.logerr('Odometry outdated')
 
-        if self.odometry_switch and self.pilot_enable:
-            # self.controller.update_nav(self.pose, velocity=self.vel)
-            # self.controller.update_nav(self.pose)
+        if self.nav_switch and self.pilot_enable:
             self.controller.request_pose(self.des_pose)
             throttle = self.controller.evaluate_control()
             rospy.loginfo(str(self.controller))
-            # rospy.loginfo('pose: %s des pose: %s throttles: %s', self.pose, self.des_pose[0:2], throttle[0:2])
-            throttle_msg = ThrusterCommand()
-            throttle_msg.header.stamp = rospy.Time().now()
-            throttle_msg.throttle = throttle
-            self.throttle_pub.publish(throttle_msg)
 
-    def handle_odometry(self, msg):
+        throttle_msg = ThrusterCommand()
+        throttle_msg.header.stamp = rospy.Time().now()
+        throttle_msg.throttle = throttle
+        self.throttle_pub.publish(throttle_msg)
+
+    def handle_real_nav(self, msg):
         try:
-            dt = msg.header.stamp.to_sec() - self.last_odometry_t
-            # TODO: add a constant
-            if dt > 0.1:
-                pos = msg.pose.pose.position
-                self.pose[0:3] = np.array([pos.x, pos.y, pos.z])
-                rot = msg.pose.pose.orientation
-                quaternion = np.array([rot.w, rot.x, rot.y, rot.z])
-                self.pose[3:6] = euler_from_quaternion(quaternion)
-                self.last_odometry_t = msg.header.stamp.to_sec()
-                self.odometry_switch = True
-                self.controller.update_nav(self.pose, dt)
+            pos = msg.position
+            orient = msg.orientation
+            vel = msg.body_velocity
+            rot = msg.orientation_rate
+            self.pose[0:3] = np.array([pos.north, pos.east, pos.depth])
+            self.pose[3:6] = np.array([orient.roll, orient.pitch, orient.yaw])
+            self.vel[0:3] = np.array([vel.x, vel.y, vel.z])
+            self.vel[3:6] = np.array([rot.roll, rot.pitch, rot.yaw])
+            dt = msg.header.stamp.to_sec() - self.last_nav_t
+            self.last_nav_t = msg.header.stamp.to_sec()
+            self.nav_switch = True
+            self.controller.update_nav(self.pose, dt, velocity=self.vel)
         except Exception as e:
             rospy.logerr('%s', e)
-            rospy.logerr('Bad odometry message format, skipping!')
-
-    # def handle_real_nav(self, msg):
-    #     try:
-    #         self.pose[0:2] = geo2xyz(msg.global_position.latitude, msg.global_position.longitude, self.origin)
-    #         # self.pose[2] = msg.altitude
-    #         self.pose[2] = 0
-    #         orient = msg.orientation
-    #         vel = msg.body_velocity
-    #         rot = msg.orientation_rate
-    #         self.pose[3:6] = np.deg2rad(np.array([orient.roll, orient.pitch, orient.yaw]))
-    #         self.vel[0:3] = np.array([vel.x, vel.y, vel.z])
-    #         self.vel[3:6] = np.array([rot.roll, rot.pitch, rot.yaw])
-    #
-    #         self.last_odometry_t = msg.header.stamp.to_sec()
-    #         self.odometry_switch = True
-    #     except Exception as e:
-    #         rospy.logerr('%s', e)
-    #         rospy.logerr('Bad odometry message format, skipping!')
+            rospy.logerr('Bad navigation message format, skipping!')
 
     def handle_sim_nav(self, msg):
         try:
@@ -140,9 +118,9 @@ class Pilot(object):
             self.pose[3:6] = np.array([orient.roll, orient.pitch, orient.yaw])
             self.vel[0:3] = np.array([vel.x, vel.y, vel.z])
             self.vel[3:6] = np.array([rot.roll, rot.pitch, rot.yaw])
-            dt = msg.header.stamp.to_sec() - self.last_odometry_t
-            self.last_odometry_t = msg.header.stamp.to_sec()
-            self.odometry_switch = True
+            dt = msg.header.stamp.to_sec() - self.last_nav_t
+            self.last_nav_t = msg.header.stamp.to_sec()
+            self.nav_switch = True
             self.controller.update_nav(self.pose, dt)
         except Exception as e:
             rospy.logerr('%s', e)

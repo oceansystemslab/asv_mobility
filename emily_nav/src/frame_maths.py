@@ -110,6 +110,47 @@ def compute_jacobian(phi, theta, psi):
     return J
 
 
+#pythran export update_jacobian(float[][], float, float, float)
+def update_jacobian(J, phi, theta, psi):
+    """This functions computes the jacobian matrix used for converting body-frame to earth-frame coordinates.
+
+    :param J: jacobian matrix (6x6)
+    :param phi: pitch angle (k)
+    :param theta: roll angle (m)
+    :param psi: yaw angle (n)
+    :return: J matrix (6x6)
+    """
+    J = np.zeros((6,6))
+
+    # jacobian one
+    J[0, 0] = np.cos(theta) * np.cos(psi)
+    J[0, 1] = np.cos(psi) * np.sin(theta) * np.sin(phi) - np.sin(psi) * np.cos(phi)
+    J[0, 2] = np.sin(psi) * np.sin(phi) + np.cos(psi) * np.cos(phi) * np.sin(theta)
+
+    J[1, 0] = np.cos(theta) * np.sin(psi)
+    J[1, 1] = np.cos(psi) * np.cos(phi) + np.sin(phi) * np.sin(theta) * np.sin(psi)
+    J[1, 2] = np.sin(psi) * np.sin(theta) * np.cos(phi) - np.cos(psi) * np.sin(phi)
+
+    J[2, 0] = -np.sin(theta)
+    J[2, 1] = np.cos(theta) * np.sin(phi)
+    J[2, 2] = np.cos(theta) * np.cos(phi)
+
+    # jacobian two
+    J[3, 3] = 1.0
+    J[3, 4] = np.sin(phi) * np.tan(theta)
+    J[3, 5] = np.cos(phi) * np.tan(theta)
+
+    J[4, 3] = 0.0
+    J[4, 4] = np.cos(phi)
+    J[4, 5] = -np.sin(phi)
+
+    J[5, 3] = 0.0
+    J[5, 4] = np.sin(phi) / np.cos(theta)
+    J[5, 5] = np.cos(phi) / np.cos(theta)
+
+    return J
+
+
 ORIENT_NED_IN_XYZ = np.array([np.pi, 0, 0])
 J_NED_IN_XYZ = compute_jacobian(*ORIENT_NED_IN_XYZ)
 J_NED_IN_XYZ_INV = np.linalg.pinv(J_NED_IN_XYZ)
@@ -119,7 +160,6 @@ def angle_xyz2ned(orient_vehicle_xyz):
     :param orient_vehicle_xyz: [roll pitch theta] in radians
     :return: [roll pitch theta] in radians in ned frame
     """
-
     vehicle_orient_ned = np.dot(J_NED_IN_XYZ_INV[3:6, 3:6], orient_vehicle_xyz)
     return vehicle_orient_ned
 
@@ -143,6 +183,7 @@ def eta_world2body(vel_ned, orient_rate_ned, vehicle_orient_ned):
 
 def wrap_pi(angle):
     return ((angle + np.pi) % (2*np.pi)) - np.pi
+
 
 if __name__ == "__main__":
     # rotations demo
