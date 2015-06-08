@@ -99,16 +99,20 @@ class Navigation(object):
             # Apply rotation to get from boat_xyz to boat_ned
             # orient_ned = frame.angle_xyz2ned(orient_xyz)
 
+            # TODO: figure out why roll and pitch have to be inverted and no conversion from xyz to ned is necessary for both position and rate
             nav_msg.orientation.roll = -orient_ned[0]
             nav_msg.orientation.pitch = -orient_ned[1]
             nav_msg.orientation.yaw = orient_ned[2]
 
             # orientation rate is specified in XYZ frame
-            orient_rate_xyz = np.array([xsens_msg.calibrated_gyroscope.x,
+            # orient_rate_xyz = np.array([xsens_msg.calibrated_gyroscope.x,
+            #                             xsens_msg.calibrated_gyroscope.y,
+            #                             xsens_msg.calibrated_gyroscope.z])
+            orient_rate_ned = np.array([xsens_msg.calibrated_gyroscope.x,
                                         xsens_msg.calibrated_gyroscope.y,
                                         xsens_msg.calibrated_gyroscope.z])
 
-            orient_rate_ned = frame.angle_xyz2ned(orient_rate_xyz)
+            # orient_rate_ned = frame.angle_xyz2ned(orient_rate_xyz)
 
             # vel_ned is velocity of the sensor in NED Earth fixed reference frame
             vel_ned = np.array([xsens_msg.velocity.x, xsens_msg.velocity.y, xsens_msg.velocity.z])
