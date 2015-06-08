@@ -95,15 +95,13 @@ class Navigation(object):
             # Apply rotation to get from sensor_xyz to boat_xyz rotation
             # orient_xyz = frame.wrap_pi(orient_xyz - SENSOR_ANGLE_OFFSETS)
             orient_ned = frame.wrap_pi(orient_ned - SENSOR_ANGLE_OFFSETS)
-            orient_ned[0] *= -1
-            orient_ned[1] *= -1
 
             # Apply rotation to get from boat_xyz to boat_ned
             # orient_ned = frame.angle_xyz2ned(orient_xyz)
 
             # TODO: figure out why roll and pitch have to be inverted and no conversion from xyz to ned is necessary for both position and rate
-            nav_msg.orientation.roll = orient_ned[0]
-            nav_msg.orientation.pitch = orient_ned[1]
+            nav_msg.orientation.roll = -orient_ned[0]
+            nav_msg.orientation.pitch = -orient_ned[1]
             nav_msg.orientation.yaw = orient_ned[2]
 
             # orientation rate is specified in XYZ frame
@@ -122,8 +120,8 @@ class Navigation(object):
             nav_msg.body_velocity.x = vel_body[0]
             nav_msg.body_velocity.y = vel_body[1]
             nav_msg.body_velocity.z = vel_body[2]
-            nav_msg.orientation_rate.roll = vel_body[3]
-            nav_msg.orientation_rate.pitch = vel_body[4]
+            nav_msg.orientation_rate.roll = -vel_body[3]
+            nav_msg.orientation_rate.pitch = -vel_body[4]
             nav_msg.orientation_rate.yaw = vel_body[5]
 
             # add variances?
