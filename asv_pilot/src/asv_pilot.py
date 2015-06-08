@@ -47,7 +47,7 @@ import numpy as np
 np.set_printoptions(precision=2, suppress=True)
 # import sys
 
-import controllers as ctrl
+import asv_controllers as ctrl
 
 # Messages
 from vehicle_interface.msg import PilotRequest, ThrusterCommand
@@ -87,7 +87,7 @@ class Pilot(object):
 
         self.last_nav_t = 0
         self.nav_switch = False
-        self.pilot_enable = True
+        self.pilot_enable = False
         self.simulation = simulation
 
         self.controller = ctrl.Controller(1/LOOP_RATE)
