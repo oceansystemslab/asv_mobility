@@ -93,7 +93,11 @@ class Navigation(object):
 
             # Apply rotation to get from sensor_xyz to boat_xyz rotation
             # orient_xyz = frame.wrap_pi(orient_xyz - SENSOR_ANGLE_OFFSETS)
+<<<<<<< HEAD
             orient_ned = frame.wrap_pi(orient_ned - SENSOR_ANGLE_OFFSETS)
+=======
+            orient_xyz = frame.wrap_pi(orient_ned - SENSOR_ANGLE_OFFSETS)
+>>>>>>> 98a60fb70fd832d871553910d7da1e3c8b7a65cf
 
             # Apply rotation to get from boat_xyz to boat_ned
             # orient_ned = frame.angle_xyz2ned(orient_xyz)
