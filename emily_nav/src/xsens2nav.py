@@ -99,8 +99,8 @@ class Navigation(object):
             # Apply rotation to get from boat_xyz to boat_ned
             # orient_ned = frame.angle_xyz2ned(orient_xyz)
 
-            nav_msg.orientation.roll = orient_ned[0]
-            nav_msg.orientation.pitch = orient_ned[1]
+            nav_msg.orientation.roll = -orient_ned[0]
+            nav_msg.orientation.pitch = -orient_ned[1]
             nav_msg.orientation.yaw = orient_ned[2]
 
             # orientation rate is specified in XYZ frame
