@@ -1,4 +1,6 @@
 <launch>
+    <!-- load the 3D model -->
+    <param name="robot_description" command="cat $(find asv_pilot)/data/rviz_emily.urdf"/>
 
     <!-- uwsim -->
     <!--not operational yet-->

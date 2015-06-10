@@ -1,10 +1,8 @@
 <launch>
+    <!-- load the 3D model -->
+    <param name="robot_description" command="cat $(find asv_pilot)/data/rviz_emily.urdf"/>
 
     <!-- rviz -->
     <node name="rviz" pkg="rviz" type="rviz" args="-d $(find asv_pilot)/conf/nav_sim.rviz"/>
-
-    <!-- uwsim -->
-    <!--<node name="uwsim" pkg="uwsim" type="uwsim" args="&#45;&#45;dataPath $(find asv_pilot) &#45;&#45;configfile $(find asv_pilot)/data/wavetank.xml" output="screen"/>-->
-
 
 </launch>
