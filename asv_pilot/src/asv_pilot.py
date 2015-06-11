@@ -50,7 +50,7 @@ np.set_printoptions(precision=2, suppress=True)
 import asv_controllers as ctrl
 
 # Messages
-from vehicle_interface.msg import PilotRequest, ThrusterCommand
+from vehicle_interface.msg import PilotRequest, PilotStatus, ThrusterCommand
 from auv_msgs.msg import NavSts
 from vehicle_interface.srv import BooleanService, BooleanServiceResponse
 
@@ -58,12 +58,28 @@ from vehicle_interface.srv import BooleanService, BooleanServiceResponse
 TOPIC_THROTTLE = '/motors/throttle'
 TOPIC_POSITION_REQUEST = '/pilot/position_req'
 TOPIC_VELOCITY_REQUEST = '/pilot/velocity_req'
+TOPIC_STATUS = '/pilot/status'
 TOPIC_NAV = '/nav/nav_sts'
 SRV_SWITCH = '/pilot/switch'
 SRV_PID_CONFIG = '/pilot/pid_config'
 NAVIGATION_TIMEOUT = 5  # seconds
 LOOP_RATE = 10  # Hz
 SIMULATION = False
+
+# Status
+CTRL_DISABLED = 0
+CTRL_ENABLED = 1
+
+STATUS_CTRL = {
+    CTRL_DISABLED: PilotStatus.PILOT_DISABLED,
+    CTRL_ENABLED: PilotStatus.PILOT_ENABLED
+}
+
+STATUS_MODE = {
+    ctrl.MODE_POSITION: PilotStatus.MODE_POSITION,
+    ctrl.MODE_VELOCITY: PilotStatus.MODE_VELOCITY,
+    ctrl.MODE_POINT_SHOOT: 'point_shoot'
+}
 
 class Pilot(object):
     """Node provides an interface between control logic and ROS. This node outputs throttle commands that can be
@@ -84,18 +100,16 @@ class Pilot(object):
         # latest throttle received
         self.pose = np.zeros(6)  # [x, y, z, roll, pitch, yaw]
         self.vel = np.zeros(6)
-        self.req_pose = np.zeros(6)
-        self.req_vel = np.zeros(6)
 
         self.last_nav_t = 0
         self.nav_switch = False
 
         # TODO: pilot_enable to False by default once tests are over
-        self.pilot_enable = True
+        self.pilot_enable = CTRL_ENABLED
         self.simulation = simulation
 
         self.controller = ctrl.Controller(1/LOOP_RATE)
-        self.controller.set_mode(ctrl.CASCADED_PID)
+        self.controller.set_mode(ctrl.MODE_POSITION)
         self.controller.update_gains(controller_config)
 
         # Subscribers
@@ -110,6 +124,8 @@ class Pilot(object):
 
         # Publishers
         self.throttle_pub = rospy.Publisher(topic_throttle, ThrusterCommand)
+        # TODO: add status publishing
+        self.status_pub = rospy.Publisher(TOPIC_STATUS, PilotStatus)
 
         # Services
         self.srv_switch = rospy.Service(SRV_SWITCH, BooleanService, self.handle_switch)
@@ -120,7 +136,7 @@ class Pilot(object):
         # if message is old and throttle is non-zero then set to zero
         if (rospy.Time.now().to_sec() - self.last_nav_t) > NAVIGATION_TIMEOUT and self.nav_switch:
             self.nav_switch = False
-            rospy.logerr('Odometry outdated')
+            rospy.logerr('Navigation outdated')
 
         if self.nav_switch and self.pilot_enable:
             throttle = self.controller.evaluate_control()
@@ -130,6 +146,7 @@ class Pilot(object):
         throttle_msg.header.stamp = rospy.Time().now()
         throttle_msg.throttle = throttle
         self.throttle_pub.publish(throttle_msg)
+        self.send_status()
 
     def handle_real_nav(self, msg):
         try:
@@ -144,7 +161,7 @@ class Pilot(object):
             dt = msg.header.stamp.to_sec() - self.last_nav_t
             self.last_nav_t = msg.header.stamp.to_sec()
             self.nav_switch = True
-            self.controller.update_nav(self.pose, dt, velocity=self.vel)
+            self.controller.update_nav(self.pose, dt=dt, velocity=self.vel)
         except Exception as e:
             rospy.logerr('%s', e)
             rospy.logerr('Bad navigation message format, skipping!')
@@ -162,31 +179,30 @@ class Pilot(object):
             dt = msg.header.stamp.to_sec() - self.last_nav_t
             self.last_nav_t = msg.header.stamp.to_sec()
             self.nav_switch = True
-            self.controller.update_nav(self.pose, dt, velocity=self.vel)
+            self.controller.update_nav(self.pose, dt=dt, velocity=self.vel)
         except Exception as e:
             rospy.logerr('%s', e)
             rospy.logerr('Bad navigation message format, skipping!')
 
     def handle_pose_req(self, msg):
         try:
-            self.req_pose = np.array(msg.position)
+            req_pose = np.array(msg.position)
             # ignore depth, pitch and roll
-            if any(self.req_pose[2:5]):
+            if any(req_pose[2:5]):
                 rospy.logwarn('Non-zero depth, pitch or roll requested. Setting those to zero.')
-            self.req_pose[2:5] = 0
-            self.controller.request_pose(self.req_pose)
+            req_pose[2:5] = 0
+            self.controller.request_pose(req_pose)
         except Exception as e:
             rospy.logerr('%s', e)
             rospy.logerr('Bad waypoint message format, skipping!')
 
     def handle_vel_req(self, msg):
         try:
-            self.req_vel = np.array(msg.velocity)
-            # ignore depth, pitch and roll
-            if any(self.req_vel[1:5]):
+            req_vel = np.array(msg.velocity)
+            if any(req_vel[1:5]):
                 rospy.logwarn('Non-zero sway, heave, pitch or roll requested. Setting those to zero.')
-            self.req_pose[1:5] = 0
-            self.controller.request_vel(self.req_vel)
+            req_vel[1:5] = 0
+            self.controller.request_vel(req_vel)
         except Exception as e:
             rospy.logerr('%s', e)
             rospy.logerr('Bad velocity message format, skipping!')
@@ -200,6 +216,19 @@ class Pilot(object):
         self.controller.update_gains(config)
         rospy.loginfo("PID config reloaded")
         return BooleanServiceResponse(True)
+
+    def send_status(self, event=None):
+        ps = PilotStatus()
+        ps.header.stamp = rospy.Time.now()
+
+        ps.status = STATUS_CTRL[self.pilot_enable]
+        ps.mode = STATUS_MODE[self.controller.mode]
+        if self.controller.req_pose is not None:
+            ps.des_pos = self.controller.req_pose.tolist()
+        ps.des_vel = self.controller.des_vel.tolist()
+
+        self.status_pub.publish(ps)
+
 
 if __name__ == '__main__':
     rospy.init_node('asv_pilot')

@@ -56,18 +56,19 @@ TURNING_SPEED = 1  # m/s
 MAX_SPEED = 2.5
 MAX_E_X_I = 0.5
 
-POINT_SHOOT = 'point_shoot'
-CASCADED_PID = 'cascaded_pid'
-VELOCITY_CTRL = 'velocity_ctrl'
+MODE_POSITION = 0
+MODE_VELOCITY = 1
+MODE_POINT_SHOOT = 2
 
 class Controller(object):
     def __init__(self, period):
-        self.mode = POINT_SHOOT
+        self.mode = MODE_POSITION
         self.dt = period
 
         self.policies = {
-            POINT_SHOOT: self.point_shoot,
-            CASCADED_PID: self.cascaded_pid
+            MODE_POSITION: self.position_pid,
+            MODE_VELOCITY: self.velocity_pid,
+            MODE_POINT_SHOOT: self.point_shoot,
         }
 
         self.turning_angle_threshold = TURNING_ANGLE_THR
@@ -129,14 +130,16 @@ class Controller(object):
         """
         return self.policies[self.mode]()
 
-    def update_nav(self, pose, dt, **kwargs):
+    def update_nav(self, pose, **kwargs):
         # get the body velocity
         if 'velocity' in kwargs.keys():
             self.body_vel = kwargs['velocity']
-        else:
-            vel_xyz = (pose - self.pose)/dt
+        elif 'dt' in kwargs.keys():
+            vel_xyz = (pose - self.pose)/kwargs['dt']
             self.body_vel = np.dot(self.J_inv, vel_xyz)
-        self.pose = np.copy(pose)
+        else:
+            raise KeyError('velocity or dt has to be specified!')
+        self.pose = pose
 
         self.J = update_jacobian(self.J, pose[3], pose[4], pose[5])
         self.J_inv = np.linalg.inv(self.J)
@@ -148,25 +151,26 @@ class Controller(object):
 
     def request_pose(self, req_pose):
         self.req_pose = req_pose
+        self.mode = MODE_POSITION
         self.req_vel = None
+        self.reset_errors(2)
 
     def request_vel(self, req_vel):
+        self.req_vel = np.zeros(2)
         self.req_vel[0] = req_vel[0]
         self.req_vel[1] = req_vel[5]
-        print self.req_vel
+        self.mode = MODE_VELOCITY
         self.req_pose = None
+        self.reset_errors(1)
 
-    def cascaded_pid(self):
-        if self.req_pose is not None:
-            self.des_vel = self.compute_des_vel(self.req_pose)
-        elif self.req_vel is not None:
-            self.des_vel = self.req_vel
-            print 1
-        else:
-            return np.zeros(6)
-
+    def position_pid(self):
+        self.des_vel = self.compute_des_vel(self.req_pose)
         self.throttle = self.compute_throttle(self.des_vel)
+        return self.throttle
 
+    def velocity_pid(self):
+        self.des_vel = self.req_vel
+        self.throttle = self.compute_throttle(self.des_vel)
         return self.throttle
 
     def compute_des_vel(self, req_pose):
