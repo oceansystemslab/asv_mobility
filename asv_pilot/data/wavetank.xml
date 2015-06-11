@@ -73,7 +73,7 @@
 
   <vehicle>
     <name>emily</name>
-    <file>data/emily.urdf</file>
+    <file>data/uwsim_emily.urdf</file>
     <position>
       <x> 0 </x>
       <y> 0 </y>
@@ -86,7 +86,7 @@
     </orientation>
 
   </vehicle>
- 
+
   <object>
     <name>wavetank</name>
     <file>data/wavetank.obj</file>

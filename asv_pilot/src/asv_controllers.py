@@ -78,14 +78,13 @@ class Controller(object):
 
         self.throttle = np.zeros(6)
 
-        self.des_pose = np.zeros(6)
-        self.des_vel = np.zeros(6)
+        self.des_vel = np.zeros(2)  # [speed_in_x (m/s), yaw_rate (rad/s)]
 
         self.req_pose = np.zeros(6)
         self.req_vel = np.zeros(6)
 
-        self.J = np.zeros((6,6))
-        self.J_inv = np.zeros((6,6))
+        self.J = np.zeros((6, 6))
+        self.J_inv = np.zeros((6, 6))
 
         self.min_throttle = np.array([0, -MAX_THROTTLE])
         self.max_throttle = np.array([MAX_THROTTLE, MAX_THROTTLE])
@@ -149,20 +148,80 @@ class Controller(object):
             self.mode = mode
 
     def request_pose(self, req_pose):
-        # TODO: only one should be used ultimately
         self.req_pose = req_pose
-        self.des_pose = req_pose
+        self.req_vel = None
 
     def request_vel(self, req_vel):
-        self.req_vel = req_vel
-        self.des_vel = req_vel
+        self.req_vel[0] = req_vel[0]
+        self.req_vel[1] = req_vel[5]
+        self.req_pose = None
 
     def cascaded_pid(self):
-        self.throttle = np.zeros(6)
+        if self.req_pose is not None:
+            self.des_vel = self.compute_des_vel(self.req_pose)
+        elif self.req_vel is not None:
+            self.des_vel = self.req_vel
+        else:
+            return np.zeros(6)
 
-        # depth, roll and pitch are ignored
-        # the controller will attempt to get to an xy coordinate
-        e_xyz = self.des_pose - self.pose
+        self.throttle = self.compute_throttle(self.des_vel)
+
+        return self.throttle
+
+# def cascaded_pid(self):
+    #     self.throttle = np.zeros(6)
+    #
+    #     # depth, roll and pitch are ignored
+    #     # the controller will attempt to get to an xy coordinate
+    #     e_xyz = self.req_pose - self.pose
+    #     self.prev_ep_p = self.ep_p
+    #     full_e_p = np.dot(self.J_inv, e_xyz)
+    #
+    #     self.ep_p[0] = full_e_p[0]
+    #     self.ep_p[1] = wrap_pi(np.arctan2(e_xyz[1], e_xyz[0]) - self.pose[5])
+    #
+    #     self.ep_d = (self.ep_p - self.prev_ep_p)/self.dt
+    #
+    #     # if destination point has been crossed then zero integral
+    #     changed_sign = (np.sign(self.ep_p) != np.sign(self.prev_ep_p))
+    #     self.ep_i[changed_sign] = 0
+    #
+    #     self.ep_i = np.clip(self.ep_p + self.ep_i, -self.kpi_limit, self.kpi_limit)
+    #     self.ep_d[1] = wrap_pi(self.ep_d[1])
+    #
+    #     # compute the desired velocity
+    #     self.des_vel = self.kpp * self.ep_p + self.kpi * self.ep_i + self.ep_d * self.kpd
+    #
+    #     # ignore the translation error if bearing error is too big
+    #     if np.abs(self.ep_p[1]) > self.turning_angle_threshold:
+    #         self.reset_errors(1)
+    #         self.des_vel[0] = TURNING_SPEED
+    #
+    #     self.des_vel = np.clip(self.des_vel, -self.v_input_limit, self.v_input_limit)
+    #
+    #     self.prev_ev_p = self.ev_p
+    #     self.ev_p[0] = self.des_vel[0] - self.body_vel[0]
+    #     self.ev_p[1] = wrap_pi(self.des_vel[1] - self.body_vel[5])
+    #
+    #     self.ev_d = (self.ev_p - self.prev_ev_p)/self.dt
+    #
+    #     # TODO: decide if below should be used
+    #     # not reasonable to keep it on velocity (maybe on yaw its ok)
+    #     # changed_sign = (np.sign(self.ev_p) != np.sign(self.prev_ev_p))
+    #     # self.ev_i[changed_sign] = 0
+    #
+    #     self.ev_i = np.clip(self.ev_p + self.ev_i, -self.kvi_limit, self.kvi_limit)
+    #     self.ep_p[1] = wrap_pi(self.ep_p[1])
+    #
+    #     self.throttle[0:2] = self.kvp * self.ev_p + self.kvi * self.ev_i + self.ev_d * self.kvd
+    #     # invert rudder throttle - because of how rudder rotation maps to the generated torque
+    #     self.throttle[1] *= -1
+    #     self.throttle[0:2] = np.clip(self.throttle[0:2], self.min_throttle, self.max_throttle)
+    #
+    #     return self.throttle
+
+    def compute_des_vel(self, req_pose):
+        e_xyz = req_pose - self.pose
         self.prev_ep_p = self.ep_p
         full_e_p = np.dot(self.J_inv, e_xyz)
 
@@ -171,7 +230,7 @@ class Controller(object):
 
         self.ep_d = (self.ep_p - self.prev_ep_p)/self.dt
 
-        # if destination point has been crossed then zero integral
+        # if destination point has been crossed then zero the integral
         changed_sign = (np.sign(self.ep_p) != np.sign(self.prev_ep_p))
         self.ep_i[changed_sign] = 0
 
@@ -179,35 +238,35 @@ class Controller(object):
         self.ep_d[1] = wrap_pi(self.ep_d[1])
 
         # compute the desired velocity
-        self.des_vel = self.kpp * self.ep_p + self.kpi * self.ep_i + self.ep_d * self.kpd
+        des_vel = self.kpp * self.ep_p + self.kpi * self.ep_i + self.ep_d * self.kpd
 
-        # ignore the translation error if bearing error is too big
+        # ignore the translation error if bearing error is too big, apply constant thrust
         if np.abs(self.ep_p[1]) > self.turning_angle_threshold:
             self.reset_errors(1)
-            self.des_vel[0] = TURNING_SPEED
+            des_vel[0] = TURNING_SPEED
 
-        self.des_vel = np.clip(self.des_vel, -self.v_input_limit, self.v_input_limit)
+        des_vel = np.clip(des_vel, -self.v_input_limit, self.v_input_limit)
+
+        return des_vel
+
+    def compute_throttle(self, des_vel):
+        throttle = np.zeros(6)
 
         self.prev_ev_p = self.ev_p
-        self.ev_p[0] = self.des_vel[0] - self.body_vel[0]
-        self.ev_p[1] = wrap_pi(self.des_vel[1] - self.body_vel[5])
+        self.ev_p[0] = des_vel[0] - self.body_vel[0]
+        self.ev_p[1] = wrap_pi(des_vel[5] - self.body_vel[5])
 
         self.ev_d = (self.ev_p - self.prev_ev_p)/self.dt
-
-        # TODO: decide if below should be used
-        # not reasonable to keep it on velocity (maybe on yaw its ok)
-        # changed_sign = (np.sign(self.ev_p) != np.sign(self.prev_ev_p))
-        # self.ev_i[changed_sign] = 0
 
         self.ev_i = np.clip(self.ev_p + self.ev_i, -self.kvi_limit, self.kvi_limit)
         self.ep_p[1] = wrap_pi(self.ep_p[1])
 
-        self.throttle[0:2] = self.kvp * self.ev_p + self.kvi * self.ev_i + self.ev_d * self.kvd
+        throttle[0:2] = self.kvp * self.ev_p + self.kvi * self.ev_i + self.ev_d * self.kvd
         # invert rudder throttle - because of how rudder rotation maps to the generated torque
-        self.throttle[1] *= -1
-        self.throttle[0:2] = np.clip(self.throttle[0:2], self.min_throttle, self.max_throttle)
+        throttle[1] *= -1
+        throttle[0:2] = np.clip(throttle[0:2], self.min_throttle, self.max_throttle)
 
-        return self.throttle
+        return throttle
 
     def point_shoot(self):
         """Simplist controller which first adjusts orientation (P control) and then moves forward while maintaining
@@ -313,12 +372,14 @@ class Controller(object):
           evd: %s
           evi: %s
           thr: %s
-          pos: %s
-          vel: %s
+          cur_pos: %s
+          des_pos: %s
+          cur_vel: %s
           des_vel: %s
         """ % (self.ep_p, self.ep_d, self.ep_i,
                self.ev_p, self.ev_d, self.ev_i,
                self.throttle[0:2],
-               np.array([self.pose[0], self.pose[1], self.pose[5]]),
-               np.array([self.body_vel[0], self.body_vel[1], self.body_vel[5]]),
+               self.pose,
+               self.req_pose,
+               np.array([self.body_vel[0], self.body_vel[5]]),
                self.des_vel[0:2])

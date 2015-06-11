@@ -83,7 +83,8 @@ class Pilot(object):
         # latest throttle received
         self.pose = np.zeros(6)  # [x, y, z, roll, pitch, yaw]
         self.vel = np.zeros(6)
-        self.des_pose = np.zeros(6)
+        self.req_pose = np.zeros(6)
+        self.req_vel = np.zeros(6)
 
         self.last_nav_t = 0
         self.nav_switch = False
@@ -97,7 +98,7 @@ class Pilot(object):
         self.controller.update_gains(controller_config)
 
         # Subscribers
-        self.waypoint_sub = rospy.Subscriber(topic_request, PilotRequest, self.handle_waypoint)
+        self.waypoint_sub = rospy.Subscriber(topic_request, PilotRequest, self.handle_pose_req)
         if self.simulation:
             self.nav_sub = rospy.Subscriber(TOPIC_NAV, NavSts, self.handle_sim_nav)
             rospy.loginfo('Using NavSts from simulation (simulation).')
@@ -120,7 +121,6 @@ class Pilot(object):
             rospy.logerr('Odometry outdated')
 
         if self.nav_switch and self.pilot_enable:
-            self.controller.request_pose(self.des_pose)
             throttle = self.controller.evaluate_control()
             rospy.loginfo(str(self.controller))
 
@@ -165,16 +165,29 @@ class Pilot(object):
             rospy.logerr('%s', e)
             rospy.logerr('Bad navigation message format, skipping!')
 
-    def handle_waypoint(self, msg):
+    def handle_pose_req(self, msg):
         try:
-            self.des_pose = np.array(msg.position)
+            self.req_pose = np.array(msg.position)
             # ignore depth, pitch and roll
-            if any(self.des_pose[2:5]):
-                rospy.logwarn('Non-zero depth, pitch or roll requested.')
-            self.des_pose[2:5] = 0
+            if any(self.req_pose[2:5]):
+                rospy.logwarn('Non-zero depth, pitch or roll requested. Setting those to zero.')
+            self.req_pose[2:5] = 0
+            self.controller.request_pose(self.req_pose)
         except Exception as e:
             rospy.logerr('%s', e)
             rospy.logerr('Bad waypoint message format, skipping!')
+
+    def handle_vel_req(self, msg):
+        try:
+            self.req_vel = np.array(msg.velocity)
+            # ignore depth, pitch and roll
+            if any(self.req_vel[1:5]):
+                rospy.logwarn('Non-zero sway, heave, pitch or roll requested. Setting those to zero.')
+            self.req_pose[1:5] = 0
+            self.controller.request_vel(self.req_vel)
+        except Exception as e:
+            rospy.logerr('%s', e)
+            rospy.logerr('Bad velocity message format, skipping!')
 
     def handle_switch(self, srv):
         self.pilot_enable = srv.request
