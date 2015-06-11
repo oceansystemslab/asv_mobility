@@ -59,8 +59,8 @@ class PololuIF(object):
         :param throttle: from -100 to 100.
         :return: zero if succeeded, non-zero for failure
         """
-        # Clamp values
-        throttle_int = max(-100, min(100, int(throttle)))
+        # Clamp and convert to integer
+        throttle_int = max(-100, min(100, int(round(throttle))))
 
         # Valid range is 0-254
         rescaled_throttle = int(round(0xFE * (throttle_int+100)/200))
