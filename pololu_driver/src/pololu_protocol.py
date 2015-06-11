@@ -60,10 +60,10 @@ class PololuIF(object):
         :return: zero if succeeded, non-zero for failure
         """
         # Clamp values
-        throttle = max(-100, min(100, throttle))
+        throttle_int = max(-100, min(100, int(throttle)))
 
         # Valid range is 0-254
-        rescaled_throttle = int(0xFE * (throttle+100)/200)
+        rescaled_throttle = int(round(0xFE * (throttle_int+100)/200))
 
         # Construct the command for moving the servo
         bud = chr(0xFF)+chr(servo_id)+chr(rescaled_throttle)
