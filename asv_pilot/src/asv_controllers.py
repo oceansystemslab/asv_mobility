@@ -183,9 +183,10 @@ class Controller(object):
 
         self.ep_d = (self.ep_p - self.prev_ep_p)/self.dt
 
+        # WARN: the output of the controller becomes much less smooth
         # if destination point has been crossed then zero the integral
-        changed_sign = (np.sign(self.ep_p) != np.sign(self.prev_ep_p))
-        self.ep_i[changed_sign] = 0
+        # changed_sign = (np.sign(self.ep_p) != np.sign(self.prev_ep_p))
+        # self.ep_i[changed_sign] = 0
 
         self.ep_i = np.clip(self.ep_p + self.ep_i, -self.kpi_limit, self.kpi_limit)
         self.ep_d[1] = wrap_pi(self.ep_d[1])
