@@ -113,7 +113,7 @@ class Pilot(object):
         self.last_nav_t = 0
         self.nav_switch = False
 
-        # TODO: pilot_enable to False by default once tests are over
+        # TODO: set pilot_enable to False by default once tests are over
         self.pilot_enable = CTRL_ENABLED
         self.simulation = simulation
 
@@ -125,12 +125,15 @@ class Pilot(object):
         self.position_sub = rospy.Subscriber(topic_position_request, PilotRequest, self.handle_pose_req)
         self.geo_sub = rospy.Subscriber(topic_geo_request, PilotRequest, self.handle_geo_req)
         self.velocity_sub = rospy.Subscriber(topic_velocity_request, PilotRequest, self.handle_vel_req)
-        if self.simulation:
-            self.nav_sub = rospy.Subscriber(TOPIC_NAV, NavSts, self.handle_sim_nav)
-            rospy.loginfo('Using NavSts from simulation (simulation).')
-        else:
-            self.nav_sub = rospy.Subscriber(TOPIC_NAV, NavSts, self.handle_real_nav)
-            rospy.loginfo('Using NavSts from vehicle (real run).')
+
+        self.nav_sub = rospy.Subscriber(TOPIC_NAV, NavSts, self.handle_real_nav)
+
+        # if self.simulation:
+        #     self.nav_sub = rospy.Subscriber(TOPIC_NAV, NavSts, self.handle_sim_nav)
+        #     rospy.loginfo('Using NavSts from simulation (simulation).')
+        # else:
+        #     self.nav_sub = rospy.Subscriber(TOPIC_NAV, NavSts, self.handle_real_nav)
+        #     rospy.loginfo('Using NavSts from vehicle (real run).')
 
         # Publishers
         self.throttle_pub = rospy.Publisher(topic_throttle, ThrusterCommand)
@@ -178,29 +181,36 @@ class Pilot(object):
 
             dt = msg.header.stamp.to_sec() - self.last_nav_t
             self.last_nav_t = msg.header.stamp.to_sec()
+
             self.nav_switch = True
-            self.controller.update_nav(self.pose, dt=dt, velocity=self.vel)
+            self.controller.update_nav(self.pose, velocity=self.vel)
         except Exception as e:
             rospy.logerr('%s', e)
             rospy.logerr('Bad navigation message format, skipping!')
 
-    def handle_sim_nav(self, msg):
-        try:
-            pos = msg.position
-            orient = msg.orientation
-            vel = msg.body_velocity
-            rot = msg.orientation_rate
-            self.pose[0:3] = np.array([pos.north, pos.east, pos.depth])
-            self.pose[3:6] = np.array([orient.roll, orient.pitch, orient.yaw])
-            self.vel[0:3] = np.array([vel.x, vel.y, vel.z])
-            self.vel[3:6] = np.array([rot.roll, rot.pitch, rot.yaw])
-            dt = msg.header.stamp.to_sec() - self.last_nav_t
-            self.last_nav_t = msg.header.stamp.to_sec()
-            self.nav_switch = True
-            self.controller.update_nav(self.pose, dt=dt, velocity=self.vel)
-        except Exception as e:
-            rospy.logerr('%s', e)
-            rospy.logerr('Bad navigation message format, skipping!')
+    # def handle_sim_nav(self, msg):
+    #     try:
+    #         pos = msg.position
+    #         orient = msg.orientation
+    #         vel = msg.body_velocity
+    #         rot = msg.orientation_rate
+    #         self.pose[0:3] = np.array([pos.north, pos.east, pos.depth])
+    #         self.pose[3:6] = np.array([orient.roll, orient.pitch, orient.yaw])
+    #         self.vel[0:3] = np.array([vel.x, vel.y, vel.z])
+    #         self.vel[3:6] = np.array([rot.roll, rot.pitch, rot.yaw])
+    #
+    #         tmp_origin = np.array([msg.origin.latitude, msg.origin.longitude])
+    #         if np.all(self.origin != tmp_origin):
+    #             self.origin = tmp_origin
+    #             self.geo_radius = fm.compute_geocentric_radius(self.origin[0])
+    #
+    #         dt = msg.header.stamp.to_sec() - self.last_nav_t
+    #         self.last_nav_t = msg.header.stamp.to_sec()
+    #         self.nav_switch = True
+    #         self.controller.update_nav(self.pose, velocity=self.vel)
+    #     except Exception as e:
+    #         rospy.logerr('%s', e)
+    #         rospy.logerr('Bad navigation message format, skipping!')
 
     def handle_pose_req(self, msg):
         try:
