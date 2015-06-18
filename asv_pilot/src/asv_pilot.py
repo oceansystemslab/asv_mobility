@@ -81,6 +81,9 @@ STATUS_MODE = {
     ctrl.MODE_POINT_SHOOT: 'point_shoot'
 }
 
+# TODO: move to param
+SCALE_THROTTLE = 1.0
+
 class Pilot(object):
     """Node provides an interface between control logic and ROS. This node outputs throttle commands that can be
      consumed either by pololu_driver or thruster_sim. The controller will not run if fresh navigation
@@ -141,6 +144,8 @@ class Pilot(object):
         if self.nav_switch and self.pilot_enable:
             throttle = self.controller.evaluate_control()
             rospy.loginfo(str(self.controller))
+
+        throttle[0] *= SCALE_THROTTLE
 
         throttle_msg = ThrusterCommand()
         throttle_msg.header.stamp = rospy.Time().now()
