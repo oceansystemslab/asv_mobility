@@ -37,6 +37,8 @@
 #  Original authors:
 #   Valerio De Carolis, Marian Andrecki, Corina Barbalata, Gordon Frost
 
+# TODO: test geo request
+
 from __future__ import division
 
 import roslib
@@ -48,6 +50,7 @@ np.set_printoptions(precision=2, suppress=True)
 # import sys
 
 import asv_controllers as ctrl
+import frame_maths as fm
 
 # Messages
 from vehicle_interface.msg import PilotRequest, PilotStatus, ThrusterCommand
@@ -57,6 +60,7 @@ from vehicle_interface.srv import BooleanService, BooleanServiceResponse
 # Constants
 TOPIC_THROTTLE = '/motors/throttle'
 TOPIC_POSITION_REQUEST = '/pilot/position_req'
+TOPIC_GEO_REQUEST = '/pilot/geo_req'
 TOPIC_VELOCITY_REQUEST = '/pilot/velocity_req'
 TOPIC_STATUS = '/pilot/status'
 TOPIC_NAV = '/nav/nav_sts'
@@ -97,12 +101,14 @@ class Pilot(object):
             achieve this velocity
         - velocity control - in progress
     """
-    def __init__(self, name, topic_throttle, topic_position_request, topic_velocity_request, simulation, controller_config):
+    def __init__(self, name, topic_throttle, topic_position_request, topic_geo_request, topic_velocity_request, simulation, controller_config):
         self.name = name
 
         # latest throttle received
         self.pose = np.zeros(6)  # [x, y, z, roll, pitch, yaw]
         self.vel = np.zeros(6)
+        self.origin = np.zeros(2)
+        self.geo_radius = fm.compute_geocentric_radius(self.origin[0])
 
         self.last_nav_t = 0
         self.nav_switch = False
@@ -117,6 +123,7 @@ class Pilot(object):
 
         # Subscribers
         self.position_sub = rospy.Subscriber(topic_position_request, PilotRequest, self.handle_pose_req)
+        self.geo_sub = rospy.Subscriber(topic_geo_request, PilotRequest, self.handle_geo_req)
         self.velocity_sub = rospy.Subscriber(topic_velocity_request, PilotRequest, self.handle_vel_req)
         if self.simulation:
             self.nav_sub = rospy.Subscriber(TOPIC_NAV, NavSts, self.handle_sim_nav)
@@ -127,7 +134,6 @@ class Pilot(object):
 
         # Publishers
         self.throttle_pub = rospy.Publisher(topic_throttle, ThrusterCommand)
-        # TODO: add status publishing
         self.status_pub = rospy.Publisher(TOPIC_STATUS, PilotStatus)
 
         # Services
@@ -153,6 +159,7 @@ class Pilot(object):
         self.throttle_pub.publish(throttle_msg)
         self.send_status()
 
+    # TODO: test on vehicle
     def handle_real_nav(self, msg):
         try:
             pos = msg.position
@@ -163,6 +170,12 @@ class Pilot(object):
             self.pose[3:6] = np.array([orient.roll, orient.pitch, orient.yaw])
             self.vel[0:3] = np.array([vel.x, vel.y, vel.z])
             self.vel[3:6] = np.array([rot.roll, rot.pitch, rot.yaw])
+
+            tmp_origin = np.array([msg.origin.latitude, msg.origin.longitude])
+            if np.all(self.origin != tmp_origin):
+                self.origin = tmp_origin
+                self.geo_radius = fm.compute_geocentric_radius(self.origin[0])
+
             dt = msg.header.stamp.to_sec() - self.last_nav_t
             self.last_nav_t = msg.header.stamp.to_sec()
             self.nav_switch = True
@@ -193,9 +206,22 @@ class Pilot(object):
         try:
             req_pose = np.array(msg.position)
             # ignore depth, pitch and roll
-            if any(req_pose[2:5]):
-                rospy.logwarn('Non-zero depth, pitch or roll requested. Setting those to zero.')
-            req_pose[2:5] = 0
+            if any(req_pose[2:6]):
+                rospy.logwarn('Non-zero depth, pitch, roll or yaw requested. Setting those to zero.')
+            req_pose[2:6] = 0
+            self.controller.request_pose(req_pose)
+        except Exception as e:
+            rospy.logerr('%s', e)
+            rospy.logerr('Bad waypoint message format, skipping!')
+
+    def handle_geo_req(self, msg):
+        try:
+            req_pose = np.array(msg.position)
+            if any(req_pose[2:6]):
+                rospy.logwarn('Non-zero depth, pitch, roll or yaw requested. Setting those to zero.')
+            # ignore depth, pitch and roll
+            req_pose[2:6] = 0
+            req_pose[0:2] = fm.geo2ne(req_pose[0:2], self.origin, self.geo_radius)
             self.controller.request_pose(req_pose)
         except Exception as e:
             rospy.logerr('%s', e)
@@ -240,15 +266,16 @@ if __name__ == '__main__':
     name = rospy.get_name()
 
     topic_throttle = rospy.get_param('~topic_throttle', TOPIC_THROTTLE)
-    topic_position_request = rospy.get_param('~topic_request', TOPIC_POSITION_REQUEST)
-    topic_velocity_request = rospy.get_param('~topic_request', TOPIC_VELOCITY_REQUEST)
+    topic_position_request = rospy.get_param('~topic_position_request', TOPIC_POSITION_REQUEST)
+    topic_geo_request = rospy.get_param('~topic_geo_request', TOPIC_GEO_REQUEST)
+    topic_velocity_request = rospy.get_param('~topic_velocity_request', TOPIC_VELOCITY_REQUEST)
     simulation = bool(int(rospy.get_param('~simulation', SIMULATION)))
     controller_config = rospy.get_param('~controller', dict())
 
     rospy.loginfo('throttle topic: %s', topic_throttle)
     rospy.loginfo('simulation: %s', simulation)
 
-    pilot = Pilot(name, topic_throttle, topic_position_request, topic_velocity_request, simulation, controller_config)
+    pilot = Pilot(name, topic_throttle, topic_position_request, topic_geo_request, topic_velocity_request, simulation, controller_config)
     loop_rate = rospy.Rate(LOOP_RATE)
 
     while not rospy.is_shutdown():
