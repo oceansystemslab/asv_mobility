@@ -50,8 +50,7 @@ import frame_maths as frame
 
 # Messages
 from auv_msgs.msg import NavSts
-# from xsens.msg import Xsens
-from vehicle_interface.msg import Xsens
+from xsens.msg import Xsens
 from vehicle_interface.srv import BooleanService, BooleanServiceResponse
 # xsens message
 
