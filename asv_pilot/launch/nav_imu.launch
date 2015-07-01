@@ -3,9 +3,11 @@
     <!-- start the motors -->
     <node name="emily_nav" pkg="emily_nav" type="xsens2nav.py" output="screen">
         <!-- set topics input and outputs -->
+        <param name="origin/latitude" value="0"/>
+        <param name="origin/longitude" value="0"/>
     </node>
 
     <!-- start the nav and imu -->
-	<include file="$(find emily)/launch/imu.launch"/>
+	<!--<include file="$(find emily)/launch/imu.launch"/>-->
 
 </launch>

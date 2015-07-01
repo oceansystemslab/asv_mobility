@@ -50,7 +50,8 @@ import frame_maths as frame
 
 # Messages
 from auv_msgs.msg import NavSts
-from xsens.msg import Xsens
+# from xsens.msg import Xsens
+from vehicle_interface.msg import Xsens
 from vehicle_interface.srv import BooleanService, BooleanServiceResponse
 # xsens message
 
@@ -65,18 +66,24 @@ LOOP_RATE = 10  # Hz
 SENSOR_ANGLE_OFFSETS = np.array([np.pi, 0, np.pi])
 
 class Navigation(object):
-    def __init__(self, name, topic_nav):
+    def __init__(self, name, topic_nav, origin, **kwargs):
         self.name = name
 
         self.point_ll = np.zeros(2)
         self.displacement_ne = np.zeros(2)
 
-        self.origin_set = False
-        self.origin = np.zeros(2)  # [latitude, longitude] in radians
+        if origin is not None:
+            self.origin = np.array([origin['latitude'], origin['longitude']])
+            self.origin_set = True
+            rospy.loginfo('%s: Setting the origin to: %s' % (self.name, self.origin))
+        else:
+            self.origin = np.zeros(2)  # [latitude, longitude] in radians
+            self.origin_set = False
+            rospy.loginfo('%s: Origin not set. Waiting for GPS fix.' % (self.name))
 
         # Distance to the centre of the Earth at given latitude assuming elipsoidal model of Earth.
         # If latitude is not known assume Earth is a sphere.
-        self.geocentric_radius = R_EARTH
+        self.geocentric_radius = frame.compute_geocentric_radius(self.origin[0])
 
         # Subscribers
         self.xsens_sub = rospy.Subscriber(TOPIC_XSENS, Xsens, self.handle_xsens)
@@ -85,7 +92,7 @@ class Navigation(object):
         self.nav_pub = rospy.Publisher(topic_nav, NavSts)
 
         # Services
-        self.srv_reset = rospy.Service(SRV_RESET_ORIGIN, BooleanService, self.handle_reset)
+        self.srv_reset = rospy.Service(SRV_RESET_ORIGIN, BooleanService, self.handle_origin_reset)
 
     def loop(self):
         # something to do here?
@@ -108,6 +115,8 @@ class Navigation(object):
             # if not self.origin_set and xsens_msg.xkf_valid: - not reliable
             if not self.origin_set and np.any(self.point_ll > 1):
                 self.find_geo_origin(self.point_ll, self.displacement_ne)
+                rospy.loginfo('%s: Got GPS fix: %s' % (self.name, self.origin))
+
 
             nav_msg.origin.latitude = self.origin[0]
             nav_msg.origin.longitude = self.origin[1]
@@ -168,12 +177,14 @@ class Navigation(object):
             rospy.logerr('%s', e)
             rospy.logerr('Bad xsens message format, skipping!')
 
-    def handle_reset(self, srv):
+    def handle_origin_reset(self, srv):
         # set origin to where the vehicle is now
         if srv.request:
             self.origin = self.point_ll
             self.geocentric_radius = R_EARTH
-        return BooleanServiceResponse(True)
+            return BooleanServiceResponse(True)
+        else:
+            return BooleanServiceResponse(False)
 
     def find_geo_origin(self, point_ll, displacement_ne):
         """Finds the origin in geo-referenced frame. The origin corresponds to (0, 0) in ned reference frame
@@ -196,10 +207,11 @@ if __name__ == '__main__':
     name = rospy.get_name()
 
     topic_nav = rospy.get_param('~topic_nav', TOPIC_NAV)
+    origin = rospy.get_param('~origin', None)
 
     rospy.loginfo('nav topic: %s', topic_nav)
 
-    nav = Navigation(name, topic_nav)
+    nav = Navigation(name, topic_nav, origin)
     loop_rate = rospy.Rate(LOOP_RATE)
 
     while not rospy.is_shutdown():
