@@ -58,7 +58,7 @@ Run Simulator
 Extra: For trajectory tracking, enable the path:
   ```
   roslaunch vehicle_core path_controller.launch
-  asv_pilot/scripts/pp_fast_long.sh
+  asv_pilot/paths/pp_fast_long.sh
   asv_pilot/scripts/path_cli.sh start
   ```
 

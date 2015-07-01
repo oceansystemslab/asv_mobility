@@ -145,7 +145,7 @@ class Pilot(object):
 
     def loop(self):
         throttle = np.zeros(6)
-        # if message is old and throttle is non-zero then set to zero
+        # if nav message is old stop the controller
         if (rospy.Time.now().to_sec() - self.last_nav_t) > NAVIGATION_TIMEOUT and self.nav_switch:
             self.nav_switch = False
             rospy.logerr('Navigation outdated')
@@ -154,7 +154,7 @@ class Pilot(object):
             throttle = self.controller.evaluate_control()
             rospy.loginfo(str(self.controller))
 
-        throttle[0] *= SCALE_THROTTLE
+        # throttle[0] *= SCALE_THROTTLE
 
         throttle_msg = ThrusterCommand()
         throttle_msg.header.stamp = rospy.Time().now()
@@ -216,8 +216,8 @@ class Pilot(object):
         try:
             req_pose = np.array(msg.position)
             # ignore depth, pitch and roll
-            if any(req_pose[2:6]):
-                rospy.logwarn('Non-zero depth, pitch, roll or yaw requested. Setting those to zero.')
+            if any(req_pose[2:5]):
+                rospy.logwarn('Non-zero depth, pitch or roll requested. Setting those to zero.')
             req_pose[2:6] = 0
             self.controller.request_pose(req_pose)
         except Exception as e:
@@ -227,8 +227,8 @@ class Pilot(object):
     def handle_geo_req(self, msg):
         try:
             req_pose = np.array(msg.position)
-            if any(req_pose[2:6]):
-                rospy.logwarn('Non-zero depth, pitch, roll or yaw requested. Setting those to zero.')
+            if any(req_pose[2:5]):
+                rospy.logwarn('Non-zero depth, pitch or roll requested. Setting those to zero.')
             # ignore depth, pitch and roll
             req_pose[2:6] = 0
             req_pose[0:2] = fm.geo2ne(req_pose[0:2], self.origin, self.geo_radius)
@@ -253,10 +253,13 @@ class Pilot(object):
         return BooleanServiceResponse(True)
 
     def handle_pid_config(self, srv):
-        config = rospy.get_param('~controller', dict())
-        self.controller.update_gains(config)
-        rospy.loginfo("PID config reloaded")
-        return BooleanServiceResponse(True)
+        if srv.request is True:
+            config = rospy.get_param('/controller', dict())
+            self.controller.update_gains(config)
+            rospy.loginfo("PID config reloaded")
+            return BooleanServiceResponse(True)
+        else:
+            return BooleanServiceResponse(False)
 
     def send_status(self, event=None):
         ps = PilotStatus()
@@ -280,7 +283,7 @@ if __name__ == '__main__':
     topic_geo_request = rospy.get_param('~topic_geo_request', TOPIC_GEO_REQUEST)
     topic_velocity_request = rospy.get_param('~topic_velocity_request', TOPIC_VELOCITY_REQUEST)
     simulation = bool(int(rospy.get_param('~simulation', SIMULATION)))
-    controller_config = rospy.get_param('~controller', dict())
+    controller_config = rospy.get_param('/controller', dict())
 
     rospy.loginfo('throttle topic: %s', topic_throttle)
     rospy.loginfo('simulation: %s', simulation)

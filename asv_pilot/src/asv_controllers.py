@@ -52,6 +52,7 @@ STOPPING_THR = 1  # at this distance in meters thruster are switched off
 SLOWDOWN_OFFSET = 2  # distance in metres at which the vehicle stops the thruster
 TURNING_THRUST = 40  # throttle
 TURNING_SPEED = 1  # m/s
+DEFAULT_THROTTLE_SCALEDOWN = 0.5
 
 MAX_SPEED = 2.5
 MAX_E_X_I = 0.5
@@ -89,6 +90,8 @@ class Controller(object):
 
         self.min_throttle = np.array([0, -MAX_THROTTLE])
         self.max_throttle = np.array([MAX_THROTTLE, MAX_THROTTLE])
+
+        self.thrust_scale = DEFAULT_THROTTLE_SCALEDOWN
 
         self.kpp = np.zeros(2)
         self.kpi = np.zeros(2)
@@ -128,7 +131,9 @@ class Controller(object):
 
         :return: a set of throttles (motor and rudder throttles) according to the control policy specified by the mode.
         """
-        return self.policies[self.mode]()
+        self.throttle = self.policies[self.mode]()
+        self.throttle[0] *= self.thrust_scale
+        return self.throttle
 
     def update_nav(self, pose, **kwargs):
         # get the body velocity
@@ -313,6 +318,7 @@ class Controller(object):
 
         self.turning_angle_threshold = params['turning_angle_threshold']
         self.turning_speed = params['turning_speed']
+        self.thrust_scale = params['thrust_scale']
 
         self.reset_errors(2)
 
