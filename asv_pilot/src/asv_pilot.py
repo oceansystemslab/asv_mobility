@@ -136,12 +136,12 @@ class Pilot(object):
         #     rospy.loginfo('Using NavSts from vehicle (real run).')
 
         # Publishers
-        self.throttle_pub = rospy.Publisher(topic_throttle, ThrusterCommand)
-        self.status_pub = rospy.Publisher(TOPIC_STATUS, PilotStatus)
+        self.throttle_pub = rospy.Publisher(topic_throttle, ThrusterCommand, tcp_nodelay=True, queue_size=1)
+        self.status_pub = rospy.Publisher(TOPIC_STATUS, PilotStatus, tcp_nodelay=True, queue_size=1)
 
         # Services
-        self.srv_switch = rospy.Service(SRV_SWITCH, BooleanService, self.handle_switch)
-        self.srv_pid_config = rospy.Service(SRV_PID_CONFIG, BooleanService, self.handle_pid_config)
+        self.srv_switch = rospy.Service(SRV_SWITCH, BooleanService, self.handle_switch, tcp_nodelay=True, queue_size=1)
+        self.srv_pid_config = rospy.Service(SRV_PID_CONFIG, BooleanService, self.handle_pid_config, tcp_nodelay=True, queue_size=1)
 
     def loop(self):
         throttle = np.zeros(6)

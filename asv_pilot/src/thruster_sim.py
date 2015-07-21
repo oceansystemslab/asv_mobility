@@ -69,10 +69,10 @@ class ThrusterSim(object):
         self.motor_enable = True
 
         # Subscribers
-        self.throttle_sub = rospy.Subscriber(topic_throttle, ThrusterCommand, self.handle_throttle)
+        self.throttle_sub = rospy.Subscriber(topic_throttle, ThrusterCommand, self.handle_throttle, tcp_nodelay=True, queue_size=1)
 
         # Publishers
-        self.force_pub = rospy.Publisher(topic_force, Vector6Stamped)
+        self.force_pub = rospy.Publisher(topic_force, Vector6Stamped, tcp_nodelay=True, queue_size=1)
 
         # Services
         self.srv_switch = rospy.Service(SRV_SWITCH, BooleanService, self.handle_switch)
