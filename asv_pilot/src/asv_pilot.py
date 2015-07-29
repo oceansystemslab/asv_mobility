@@ -101,7 +101,7 @@ class Pilot(object):
             achieve this velocity
         - velocity control - in progress
     """
-    def __init__(self, name, topic_throttle, topic_position_request, topic_geo_request, topic_velocity_request, simulation, controller_config):
+    def __init__(self, name, topic_throttle, topic_position_request, topic_geo_request, topic_velocity_request, topic_nav, topic_pilot_status, simulation, controller_config):
         self.name = name
 
         # latest throttle received
@@ -126,7 +126,7 @@ class Pilot(object):
         self.geo_sub = rospy.Subscriber(topic_geo_request, PilotRequest, self.handle_geo_req)
         self.velocity_sub = rospy.Subscriber(topic_velocity_request, PilotRequest, self.handle_vel_req)
 
-        self.nav_sub = rospy.Subscriber(TOPIC_NAV, NavSts, self.handle_real_nav)
+        self.nav_sub = rospy.Subscriber(topic_nav, NavSts, self.handle_real_nav)
 
         # if self.simulation:
         #     self.nav_sub = rospy.Subscriber(TOPIC_NAV, NavSts, self.handle_sim_nav)
@@ -137,11 +137,11 @@ class Pilot(object):
 
         # Publishers
         self.throttle_pub = rospy.Publisher(topic_throttle, ThrusterCommand, tcp_nodelay=True, queue_size=1)
-        self.status_pub = rospy.Publisher(TOPIC_STATUS, PilotStatus, tcp_nodelay=True, queue_size=1)
+        self.status_pub = rospy.Publisher(topic_pilot_status, PilotStatus, tcp_nodelay=True, queue_size=1)
 
         # Services
-        self.srv_switch = rospy.Service(SRV_SWITCH, BooleanService, self.handle_switch, tcp_nodelay=True, queue_size=1)
-        self.srv_pid_config = rospy.Service(SRV_PID_CONFIG, BooleanService, self.handle_pid_config, tcp_nodelay=True, queue_size=1)
+        self.srv_switch = rospy.Service(SRV_SWITCH, BooleanService, self.handle_switch)
+        self.srv_pid_config = rospy.Service(SRV_PID_CONFIG, BooleanService, self.handle_pid_config)
 
     def loop(self):
         throttle = np.zeros(6)
@@ -282,13 +282,16 @@ if __name__ == '__main__':
     topic_position_request = rospy.get_param('~topic_position_request', TOPIC_POSITION_REQUEST)
     topic_geo_request = rospy.get_param('~topic_geo_request', TOPIC_GEO_REQUEST)
     topic_velocity_request = rospy.get_param('~topic_velocity_request', TOPIC_VELOCITY_REQUEST)
+    topic_nav = rospy.get_param('~topic_nav', TOPIC_NAV)
+    topic_pilot_status = rospy.get_param('~topic_pilot_status', TOPIC_STATUS)
     simulation = bool(int(rospy.get_param('~simulation', SIMULATION)))
     controller_config = rospy.get_param('/controller', dict())
 
     rospy.loginfo('throttle topic: %s', topic_throttle)
-    rospy.loginfo('simulation: %s', simulation)
+    # rospy.loginfo('simulation: %s', simulation)
 
-    pilot = Pilot(name, topic_throttle, topic_position_request, topic_geo_request, topic_velocity_request, simulation, controller_config)
+    pilot = Pilot(name, topic_throttle, topic_position_request, topic_geo_request, topic_velocity_request, topic_nav,
+                  topic_pilot_status, simulation, controller_config)
     loop_rate = rospy.Rate(LOOP_RATE)
 
     while not rospy.is_shutdown():

@@ -1,19 +1,26 @@
 <launch>
-
     <!-- this is out here so that the controller config can be reloaded on the fly-->
     <rosparam command="load" file="$(find asv_pilot)/conf/pid_sim.yaml" />
+
     <!-- start the pilot -->
     <node name="pilot" pkg="asv_pilot" type="asv_pilot.py" output="screen">
-        <!-- set topics input and outputs -->
-        <param name="topic_throttle" value="motors/throttle"/>
-        <param name="simulation" value="1"/>
+        <!-- set input topics -->
+        <param name="topic_position_request" value="emily/pilot/position_req"/>
+        <param name="topic_geo_request" value="emily/pilot/geo_req"/>
+        <param name="topic_velocity_request" value="emily/pilot/velocity_req"/>
+        <param name="topic_nav" value="emily/nav/nav_sts"/>
+
+        <!-- set output topics-->
+        <param name="topic_throttle" value="emily/motors/throttle"/>
+        <param name="topic_pilot_status" value="emily/pilot/status"/>
+        <!--<param name="simulation" value="1"/>-->
     </node>
 
     <!-- start the thruster sim -->
     <node name="thruster_sim" pkg="asv_pilot" type="thruster_sim.py">
         <!-- set topics input and outputs -->
-        <param name="topic_force" value="forces/sim/body"/>
-        <param name="topic_throttle" value="motors/throttle"/>
+        <param name="topic_force" value="emily/forces/sim/body"/>
+        <param name="topic_throttle" value="emily/motors/throttle"/>
     </node>
 
     <!-- default args -->
@@ -33,8 +40,11 @@
 
         <param name="verbose" value="$(arg verbose)" type="bool"/>
 
+        <param name="topic_nav" value="emily/nav/nav_sts"/>
+        <param name="topic_forces" value="emily/forces/sim/body"/>
+
         <!-- odometry configuration (defaults are used for single vehicle operations) -->
-        <param name="topic_odom" value="nav/odometry"/>
+        <param name="topic_odom" value="emily/nav/odometry"/>
         <param name="frame_parent" value="world"/>
         <param name="frame_odom" value="map"/>
         <param name="frame_child" value="base_link"/>
