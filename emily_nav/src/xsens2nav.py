@@ -100,7 +100,7 @@ class Navigation(object):
     def handle_xsens(self, xsens_msg):
         try:
             nav_msg = NavSts()
-            nav_msg.header.stamp = xsens_msg.header.stamp
+            nav_msg.header.stamp = rospy.Time.now()
 
             # global coords
             nav_msg.global_position.latitude = xsens_msg.position.latitude
@@ -115,7 +115,6 @@ class Navigation(object):
             if not self.origin_set and np.any(self.point_ll > 1):
                 self.find_geo_origin(self.point_ll, self.displacement_ne)
                 rospy.loginfo('%s: Got GPS fix: %s' % (self.name, self.origin))
-
 
             nav_msg.origin.latitude = self.origin[0]
             nav_msg.origin.longitude = self.origin[1]

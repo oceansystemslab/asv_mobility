@@ -179,7 +179,7 @@ class Pilot(object):
                 self.origin = tmp_origin
                 self.geo_radius = fm.compute_geocentric_radius(self.origin[0])
 
-            dt = msg.header.stamp.to_sec() - self.last_nav_t
+            # dt = msg.header.stamp.to_sec() - self.last_nav_t
             self.last_nav_t = msg.header.stamp.to_sec()
 
             self.nav_switch = True

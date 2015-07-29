@@ -86,6 +86,7 @@ class ThrusterSim(object):
         if self.motor_enable is True:
             force = ep.compute_body_force(self.throttle.round().astype('int'))
             msg = Vector6Stamped()
+            msg.header.stamp = rospy.Time().now()
             msg.values = force
             self.force_pub.publish(msg)
 
@@ -103,6 +104,7 @@ class ThrusterSim(object):
 
     def set_force_neutral(self):
         msg = Vector6Stamped()
+        msg.header.stamp = rospy.Time().now()
         msg.values = np.zeros(6)
         self.force_pub.publish(msg)
 
