@@ -156,10 +156,11 @@ class Pilot(object):
 
         # throttle[0] *= SCALE_THROTTLE
 
-        throttle_msg = ThrusterCommand()
-        throttle_msg.header.stamp = rospy.Time().now()
-        throttle_msg.throttle = throttle
-        self.throttle_pub.publish(throttle_msg)
+            thr_msg = ThrusterCommand()
+            thr_msg.header.stamp = rospy.Time().now()
+            thr_msg.throttle = throttle
+            self.throttle_pub.publish(thr_msg)
+
         self.send_status()
 
     # TODO: test on vehicle
@@ -250,7 +251,12 @@ class Pilot(object):
 
     def handle_switch(self, srv):
         self.pilot_enable = srv.request
-        return BooleanServiceResponse(True)
+        if not self.pilot_enable:
+            thr_msg = ThrusterCommand()
+            thr_msg.header.stamp = rospy.Time().now()
+            thr_msg.throttle = np.zeros(6)
+            self.throttle_pub.publish(thr_msg)
+        return BooleanServiceResponse(self.pilot_enable)
 
     def handle_pid_config(self, srv):
         if srv.request is True:
