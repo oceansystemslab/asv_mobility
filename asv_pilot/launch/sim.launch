@@ -1,9 +1,9 @@
 <launch>
-    <!-- this is out here so that the controller config can be reloaded on the fly-->
-    <rosparam command="load" file="$(find asv_pilot)/conf/pid_sim.yaml" />
-
     <!-- start the pilot -->
-    <node name="pilot" pkg="asv_pilot" type="asv_pilot.py" output="screen">
+    <node name="emily_pilot" pkg="asv_pilot" type="asv_pilot.py" output="screen">
+        <!-- this is out here so that the controller config can be reloaded on the fly-->
+        <rosparam command="load" file="$(find asv_pilot)/conf/pid_sim.yaml" />
+
         <!-- set input topics -->
         <param name="topic_position_request" value="emily/pilot/position_req"/>
         <param name="topic_geo_request" value="emily/pilot/geo_req"/>
@@ -17,7 +17,7 @@
     </node>
 
     <!-- start the thruster sim -->
-    <node name="thruster_sim" pkg="asv_pilot" type="thruster_sim.py">
+    <node name="emily_thruster_sim" pkg="asv_pilot" type="thruster_sim.py">
         <!-- set topics input and outputs -->
         <param name="topic_force" value="emily/forces/sim/body"/>
         <param name="topic_throttle" value="emily/motors/throttle"/>
@@ -33,7 +33,7 @@
     <!--<param name="robot_description" command="cat $(find asv_pilot)/data/rviz_emily.urdf"/>-->
 
     <!-- start the navigation simulator -->
-    <node name="nav_sim" pkg="vehicle_core" type="node_nav_sim.py" output="screen">
+    <node name="emily_nav_sim" pkg="vehicle_core" type="node_nav_sim.py" output="screen">
         <!-- sim_rate: publish rate of nav messages (default: 20 Hz) -->
         <param name="sim_rate" value="20"/>
         <param name="pub_rate" value="10"/>
@@ -44,7 +44,7 @@
         <param name="topic_forces" value="emily/forces/sim/body"/>
 
         <!-- odometry configuration (defaults are used for single vehicle operations) -->
-        <param name="topic_odom" value="emily/nav/odometryyy"/>
+        <param name="topic_odom" value="emily/nav/odometry"/>
         <param name="frame_parent" value="world"/>
         <param name="frame_odom" value="map"/>
         <param name="frame_child" value="base_link"/>

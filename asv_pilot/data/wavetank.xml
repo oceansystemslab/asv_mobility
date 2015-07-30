@@ -121,7 +121,7 @@
 
   <rosInterfaces>
     <ROSOdomToPAT>
-      <topic> /nav/odometry </topic>
+      <topic> /emily/nav/odometry </topic>
       <vehicleName> emily </vehicleName>
       <visualize> 1 </visualize>
     </ROSOdomToPAT>

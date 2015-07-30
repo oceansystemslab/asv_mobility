@@ -64,7 +64,7 @@ TOPIC_GEO_REQUEST = '/pilot/geo_req'
 TOPIC_VELOCITY_REQUEST = '/pilot/velocity_req'
 TOPIC_STATUS = '/pilot/status'
 TOPIC_NAV = '/nav/nav_sts'
-SRV_SWITCH = '/pilot/switch'
+SRV_SWITCH = '/emily/pilot/switch'
 SRV_PID_CONFIG = '/pilot/pid_config'
 NAVIGATION_TIMEOUT = 5  # seconds
 LOOP_RATE = 10  # Hz
@@ -285,9 +285,14 @@ if __name__ == '__main__':
     topic_nav = rospy.get_param('~topic_nav', TOPIC_NAV)
     topic_pilot_status = rospy.get_param('~topic_pilot_status', TOPIC_STATUS)
     simulation = bool(int(rospy.get_param('~simulation', SIMULATION)))
-    controller_config = rospy.get_param('/controller', dict())
+    controller_config = rospy.get_param('~controller', dict())
 
     rospy.loginfo('throttle topic: %s', topic_throttle)
+    rospy.loginfo('topic_position_request: %s', topic_position_request)
+    rospy.loginfo('topic_geo_request: %s', topic_geo_request)
+    rospy.loginfo('topic_velocity_request: %s', topic_velocity_request)
+    rospy.loginfo('topic_nav: %s', topic_nav)
+    rospy.loginfo('topic_pilot_status: %s', topic_pilot_status)
     # rospy.loginfo('simulation: %s', simulation)
 
     pilot = Pilot(name, topic_throttle, topic_position_request, topic_geo_request, topic_velocity_request, topic_nav,
