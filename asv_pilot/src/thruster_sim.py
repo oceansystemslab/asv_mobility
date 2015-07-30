@@ -50,7 +50,7 @@ import emily_physics as ep
 from vehicle_interface.msg import ThrusterCommand, Vector6Stamped
 
 # Services
-from vehicle_interface.srv import BooleanService
+from vehicle_interface.srv import BooleanService, BooleanServiceResponse
 
 # Constants
 TOPIC_THROTTLE = '/motors/throttle'
@@ -60,7 +60,7 @@ MSG_TIMEOUT = 0.5  # seconds
 LOOP_RATE = 10  # Hz
 
 class ThrusterSim(object):
-    def __init__(self, name, topic_throttle, topic_force):
+    def __init__(self, name, topic_throttle, topic_force, srv_switch):
         self.name = name
 
         # latest throttle received
@@ -75,7 +75,7 @@ class ThrusterSim(object):
         self.force_pub = rospy.Publisher(topic_force, Vector6Stamped, tcp_nodelay=True, queue_size=1)
 
         # Services
-        self.srv_switch = rospy.Service(SRV_SWITCH, BooleanService, self.handle_switch)
+        self.srv_switch = rospy.Service(srv_switch, BooleanService, self.handle_switch)
 
     def loop(self):
         # if message is old and throttle is non-zero then set to zero
@@ -101,6 +101,7 @@ class ThrusterSim(object):
         self.motor_enable = srv.request
         if not self.motor_enable:
             self.set_force_neutral()
+        return BooleanServiceResponse(self.motor_enable)
 
     def set_force_neutral(self):
         msg = Vector6Stamped()
@@ -114,11 +115,13 @@ if __name__ == '__main__':
 
     topic_throttle = rospy.get_param('~topic_throttle', TOPIC_THROTTLE)
     topic_force = rospy.get_param('~topic_force', TOPIC_FORCE)
+    srv_switch = rospy.get_param('~srv_switch', SRV_SWITCH)
 
     rospy.loginfo('throttle topic: %s', topic_throttle)
     rospy.loginfo('force topic: %s', topic_force)
+    rospy.loginfo('service switch: %s', srv_switch)
 
-    ts = ThrusterSim(name, topic_throttle, topic_force)
+    ts = ThrusterSim(name, topic_throttle, topic_force, srv_switch)
     loop_rate = rospy.Rate(LOOP_RATE)
 
     while not rospy.is_shutdown():

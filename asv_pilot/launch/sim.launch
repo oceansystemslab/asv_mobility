@@ -21,6 +21,7 @@
         <!-- set topics input and outputs -->
         <param name="topic_force" value="emily/forces/sim/body"/>
         <param name="topic_throttle" value="emily/motors/throttle"/>
+        <param name="srv_switch" value="emily/motors/switch"/>
     </node>
 
     <!-- default args -->

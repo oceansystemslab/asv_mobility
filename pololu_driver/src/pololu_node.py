@@ -59,17 +59,17 @@ import pololu_protocol
 from vehicle_interface.msg import ThrusterCommand
 
 # Services
-from vehicle_interface.srv import BooleanService
+from vehicle_interface.srv import BooleanService, BooleanServiceResponse
 
 # Constants
 PORT = '/dev/ttyACM0'
-TOPIC_THROTTLE = '/motors/throttle'
-SRV_SWITCH = '/motors/switch'
+TOPIC_THROTTLE = 'motors/throttle'
+SRV_SWITCH = 'motors/switch'
 THRUSTER_COMMAND_TIMEOUT = 0.5  # seconds
 LOOP_RATE = 20  # Hz
 
 class PololuNode(object):
-    def __init__(self, name, port):
+    def __init__(self, name, port, topic_throttle, srv_switch):
         self.name = name
         self.pololu = pololu_protocol.PololuIF(port)
 
@@ -79,10 +79,10 @@ class PololuNode(object):
         self.motor_enable = True
 
         # Subscribers
-        self.throttle_sub = rospy.Subscriber(TOPIC_THROTTLE, ThrusterCommand, self.handle_throttle)
+        self.throttle_sub = rospy.Subscriber(topic_throttle, ThrusterCommand, self.handle_throttle, tcp_nodelay=True, queue_size=1)
 
         # Services
-        self.srv_switch = rospy.Service(SRV_SWITCH, BooleanService, self.handle_switch)
+        self.srv_switch = rospy.Service(srv_switch, BooleanService, self.handle_switch)
 
     def loop(self):
         # if message is old and throttle is non-zero then set to zero
@@ -96,6 +96,8 @@ class PololuNode(object):
                     rospy.logerr('Error writing to Pololu')
 
     def handle_throttle(self, msg):
+        """msg.throttle[0] corresponds to thrust, msg.throttle[1] corresponds to rudder angle
+        """
         try:
             self.last_msg_t = msg.header.stamp.to_sec()
             self.throttle = np.clip(np.array(msg.throttle[0:6]), -100, 100)
@@ -107,15 +109,18 @@ class PololuNode(object):
         if not self.motor_enable:
             self.throttle = np.zeros(6)
             self.pololu.set_all_neutral()
+        return BooleanServiceResponse(self.motor_enable)
 
 if __name__ == '__main__':
     rospy.init_node('pololu_driver')
     name = rospy.get_name()
 
     port = rospy.get_param('~port', PORT)
+    topic_throttle = rospy.get_param('~topic_throttle', TOPIC_THROTTLE)
+    srv_switch = rospy.get_param('~srv_switch', SRV_SWITCH)
     rospy.loginfo("port: %s", port)
 
-    node = PololuNode(name, port)
+    node = PololuNode(name, port, topic_throttle, srv_switch)
     loop_rate = rospy.Rate(LOOP_RATE)
 
     while not rospy.is_shutdown():

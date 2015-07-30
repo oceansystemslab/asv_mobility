@@ -4,6 +4,8 @@
     <node name="pololu_driver" pkg="pololu_driver" type="pololu_node.py" output="screen">
         <!-- set topics input and outputs -->
         <param name="port" value="/dev/ttyACM0"/>
+        <param name="topic_throttle" value="/motors/throttle"/>
+        <param name="srv_switch" value="/motors/switch"/>
     </node>
 
     <!-- start the pilot -->
