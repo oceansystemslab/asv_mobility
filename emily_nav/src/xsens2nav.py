@@ -85,10 +85,10 @@ class Navigation(object):
         self.geocentric_radius = frame.compute_geocentric_radius(self.origin[0])
 
         # Subscribers
-        self.xsens_sub = rospy.Subscriber(TOPIC_XSENS, Xsens, self.handle_xsens)
+        self.xsens_sub = rospy.Subscriber(TOPIC_XSENS, Xsens, self.handle_xsens, tcp_nodelay=True, queue_size=1)
 
         # Publishers
-        self.nav_pub = rospy.Publisher(topic_nav, NavSts)
+        self.nav_pub = rospy.Publisher(topic_nav, NavSts, tcp_nodelay=True, queue_size=1)
 
         # Services
         self.srv_reset = rospy.Service(SRV_RESET_ORIGIN, BooleanService, self.handle_origin_reset)
