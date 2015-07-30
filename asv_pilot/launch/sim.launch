@@ -44,7 +44,7 @@
         <param name="topic_forces" value="emily/forces/sim/body"/>
 
         <!-- odometry configuration (defaults are used for single vehicle operations) -->
-        <param name="topic_odom" value="emily/nav/odometry"/>
+        <param name="topic_odom" value="emily/nav/odometryyy"/>
         <param name="frame_parent" value="world"/>
         <param name="frame_odom" value="map"/>
         <param name="frame_child" value="base_link"/>
