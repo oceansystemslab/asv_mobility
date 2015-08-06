@@ -7,13 +7,6 @@
         <param name="origin/longitude" value="0"/>
     </node>
 
-    <!-- odometry -->
-    <node name="emily_odometry" pkg="vehicle_core" type="node_odom.py" output="screen">
-        <param name="input" value="/emily/nav/nav_sts"/>
-        <param name="output" value="/emily/nav/odometry"/>
-        <param name="parent" value="map"/>
-    </node>
-
     <!-- imu driver -->
 	<include file="$(find emily)/launch/imu.launch"/>
 
