@@ -3,7 +3,7 @@ asv_mobility
 
 This repo holds the ROS packages for Autonomous Emily boat. Some of the packages are vehicle specific (e.g. motor driver, thruster simulator or navigation).
 Some of the tools are expected to be useful in other surface vehicles (asv_controllers, frame_maths).
-It is important that this repo remains compatible with ROS Electric as this is the current version of ROS installed on Emily.
+It is important that this repo remains compatible with ROS Diamondback as this is the current version of ROS installed on Emily.
 Many functionalities of the packages are available only if vehicle_core repository is accessible.
 
 Guidelines
@@ -24,7 +24,7 @@ Initially this repo is providing packages using the `rosbuild` build system unti
 
 Requirements
 ------------
-  - A valid ROS installation (version Electric or later is suggested)
+  - A valid ROS installation (version Diamondback or later is suggested)
   - Python 2.7+
   - Numpy 1.8+
 
