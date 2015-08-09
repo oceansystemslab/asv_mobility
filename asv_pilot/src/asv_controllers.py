@@ -52,9 +52,10 @@ STOPPING_THR = 1  # at this distance in meters thruster are switched off
 SLOWDOWN_OFFSET = 2  # distance in metres at which the vehicle stops the thruster
 TURNING_THRUST = 40  # throttle
 TURNING_SPEED = 1  # m/s
-DEFAULT_THROTTLE_SCALEDOWN = 0.5
+DEFAULT_THROTTLE_SCALE = 1
 
-MAX_SPEED = 2.5
+MAX_SPEED = 2.5  # m/s
+MAX_ALLOWED_DISTANCE = 200  # m
 MAX_E_X_I = 0.5
 
 MODE_POSITION = 0
@@ -91,7 +92,7 @@ class Controller(object):
         self.min_throttle = np.array([0, -MAX_THROTTLE])
         self.max_throttle = np.array([MAX_THROTTLE, MAX_THROTTLE])
 
-        self.thrust_scale = DEFAULT_THROTTLE_SCALEDOWN
+        self.thrust_scale = DEFAULT_THROTTLE_SCALE
 
         self.kpp = np.zeros(2)
         self.kpi = np.zeros(2)
@@ -155,10 +156,14 @@ class Controller(object):
             self.mode = mode
 
     def request_pose(self, req_pose):
+        distance = np.linalg.norm(self.pose[0:2] - req_pose[0:2])
+        if distance > MAX_ALLOWED_DISTANCE:
+            raise ValueError("Requested point too far away: %s. Farther than %s", distance, MAX_ALLOWED_DISTANCE)
+
         self.req_pose = req_pose
         self.mode = MODE_POSITION
         self.req_vel = None
-        self.reset_errors(2)
+        # self.reset_errors(2)
 
     def request_vel(self, req_vel):
         self.req_vel = np.zeros(2)
@@ -166,7 +171,7 @@ class Controller(object):
         self.req_vel[1] = req_vel[5]
         self.mode = MODE_VELOCITY
         self.req_pose = None
-        self.reset_errors(1)
+        # self.reset_errors(1)
 
     def position_pid(self):
         self.des_vel = self.compute_des_vel(self.req_pose)

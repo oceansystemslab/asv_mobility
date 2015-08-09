@@ -68,7 +68,7 @@ class Navigation(object):
     def __init__(self, name, topic_nav, origin, wait_for_GPS, **kwargs):
         self.name = name
 
-        self.point_ll = np.zeros(2)
+        self.point_ll = np.zeros(2)  # [latitude, longitude]
         self.displacement_ne = np.zeros(2)
 
         self.wait_for_GPS = wait_for_GPS
