@@ -2,14 +2,14 @@
     controller:
         # general options
         turning_speed: 1.0
-        turning_angle_threshold: 1.57
-        thrust_scale: 0.5
+        turning_angle_threshold: 1.3
+        thrust_scale: 1
 
         # position gains
         pos_x: { kp: 0.10, ki: 0.0, kd: 0.0, lim: 0.1 }        # max out at 20	 m
-        pos_n: { kp: 0.3, ki: 0.0, kd: 0.0, lim: 0.0 }
+        pos_n: { kp: 0.3, ki: 0.0, kd: 0.0, lim: 0.0 }          # max out at ~180 degrees
 
         # velocity gains
-        vel_u: { kp: 40.0, ki: 2.0, kd: 0.0, lim: 40.0, input_lim: 2.0 }       # when input is 2 m produces 100 (max)
-        vel_r: { kp: 100.0, ki: 2.0, kd: 0.0, lim: 10.0, input_lim: 1 }
+        vel_u: { kp: 40.0, ki: 2.0, kd: 0.0, lim: 100.0, input_lim: 2.0 }       # when input is 2 m produces 100 (max)
+        vel_r: { kp: 100.0, ki: 20.0, kd: 5.0, lim: 1.0, input_lim: 1 }
 
