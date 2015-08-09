@@ -6,6 +6,7 @@ PWD=$(pwd)
 
 # topics names
 POSITION_REQ="/emily/pilot/position_req"
+UNPACKER_PERF="/modem/unpacker/status"
 
 ### script below ###
 echo $DIR
@@ -26,6 +27,7 @@ do
   
 	rostopic echo -p -b $BAG /emily/nav/nav_sts > "${PREFIX}_nav_sts.csv"
 	rostopic echo -p -b $BAG $POSITION_REQ > "${PREFIX}_position_req.csv"
+	rostopic echo -p -b $BAG $UNPACKER_PERF > "${PREFIX}_unpacker_perf.csv"
 
   
 done
