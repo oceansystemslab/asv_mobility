@@ -67,7 +67,7 @@ TOPIC_NAV = '/nav/nav_sts'
 SRV_SWITCH = '/emily/pilot/switch'
 SRV_PID_CONFIG = '/pilot/pid_config'
 NAVIGATION_TIMEOUT = 5  # seconds
-LOOP_RATE = 10  # Hz
+LOOP_RATE = 5  # Hz
 SIMULATION = False
 
 # Status
@@ -101,7 +101,8 @@ class Pilot(object):
             achieve this velocity
         - velocity control - in progress
     """
-    def __init__(self, name, topic_throttle, topic_position_request, topic_geo_request, topic_velocity_request, topic_nav, topic_pilot_status, simulation, controller_config):
+    def __init__(self, name, topic_throttle, topic_position_request, topic_geo_request, topic_velocity_request,
+                 topic_nav, topic_pilot_status, srv_switch, simulation, controller_config):
         self.name = name
 
         # latest throttle received
@@ -122,25 +123,18 @@ class Pilot(object):
         self.controller.update_gains(controller_config)
 
         # Subscribers
-        self.position_sub = rospy.Subscriber(topic_position_request, PilotRequest, self.handle_pose_req)
-        self.geo_sub = rospy.Subscriber(topic_geo_request, PilotRequest, self.handle_geo_req)
-        self.velocity_sub = rospy.Subscriber(topic_velocity_request, PilotRequest, self.handle_vel_req)
+        self.position_sub = rospy.Subscriber(topic_position_request, PilotRequest, self.handle_pose_req, tcp_nodelay=True, queue_size=1)
+        self.geo_sub = rospy.Subscriber(topic_geo_request, PilotRequest, self.handle_geo_req, tcp_nodelay=True, queue_size=1)
+        self.velocity_sub = rospy.Subscriber(topic_velocity_request, PilotRequest, self.handle_vel_req, tcp_nodelay=True, queue_size=1)
 
-        self.nav_sub = rospy.Subscriber(topic_nav, NavSts, self.handle_real_nav)
-
-        # if self.simulation:
-        #     self.nav_sub = rospy.Subscriber(TOPIC_NAV, NavSts, self.handle_sim_nav)
-        #     rospy.loginfo('Using NavSts from simulation (simulation).')
-        # else:
-        #     self.nav_sub = rospy.Subscriber(TOPIC_NAV, NavSts, self.handle_real_nav)
-        #     rospy.loginfo('Using NavSts from vehicle (real run).')
+        self.nav_sub = rospy.Subscriber(topic_nav, NavSts, self.handle_real_nav, tcp_nodelay=True, queue_size=1)
 
         # Publishers
         self.throttle_pub = rospy.Publisher(topic_throttle, ThrusterCommand, tcp_nodelay=True, queue_size=1)
         self.status_pub = rospy.Publisher(topic_pilot_status, PilotStatus, tcp_nodelay=True, queue_size=1)
 
         # Services
-        self.srv_switch = rospy.Service(SRV_SWITCH, BooleanService, self.handle_switch)
+        self.srv_switch = rospy.Service(srv_switch, BooleanService, self.handle_switch)
         self.srv_pid_config = rospy.Service(SRV_PID_CONFIG, BooleanService, self.handle_pid_config)
 
     def loop(self):
@@ -157,7 +151,7 @@ class Pilot(object):
         # throttle[0] *= SCALE_THROTTLE
 
             thr_msg = ThrusterCommand()
-            thr_msg.header.stamp = rospy.Time().now()
+            thr_msg.header.stamp = rospy.Time.now()
             thr_msg.throttle = throttle
             self.throttle_pub.publish(thr_msg)
 
@@ -189,71 +183,35 @@ class Pilot(object):
             rospy.logerr('%s', e)
             rospy.logerr('Bad navigation message format, skipping!')
 
-    # def handle_sim_nav(self, msg):
-    #     try:
-    #         pos = msg.position
-    #         orient = msg.orientation
-    #         vel = msg.body_velocity
-    #         rot = msg.orientation_rate
-    #         self.pose[0:3] = np.array([pos.north, pos.east, pos.depth])
-    #         self.pose[3:6] = np.array([orient.roll, orient.pitch, orient.yaw])
-    #         self.vel[0:3] = np.array([vel.x, vel.y, vel.z])
-    #         self.vel[3:6] = np.array([rot.roll, rot.pitch, rot.yaw])
-    #
-    #         tmp_origin = np.array([msg.origin.latitude, msg.origin.longitude])
-    #         if np.all(self.origin != tmp_origin):
-    #             self.origin = tmp_origin
-    #             self.geo_radius = fm.compute_geocentric_radius(self.origin[0])
-    #
-    #         dt = msg.header.stamp.to_sec() - self.last_nav_t
-    #         self.last_nav_t = msg.header.stamp.to_sec()
-    #         self.nav_switch = True
-    #         self.controller.update_nav(self.pose, velocity=self.vel)
-    #     except Exception as e:
-    #         rospy.logerr('%s', e)
-    #         rospy.logerr('Bad navigation message format, skipping!')
-
     def handle_pose_req(self, msg):
-        try:
-            req_pose = np.array(msg.position)
-            # ignore depth, pitch and roll
-            if any(req_pose[2:5]):
-                rospy.logwarn('Non-zero depth, pitch or roll requested. Setting those to zero.')
-            req_pose[2:6] = 0
-            self.controller.request_pose(req_pose)
-        except Exception as e:
-            rospy.logerr('%s', e)
-            rospy.logerr('Bad waypoint message format, skipping!')
+        req_pose = np.array(msg.position)
+        # ignore depth, pitch and roll
+        if any(req_pose[2:5]):
+            rospy.logwarn('Non-zero depth, pitch or roll requested. Setting those to zero.')
+        req_pose[2:6] = 0
+        self.controller.request_pose(req_pose)
 
     def handle_geo_req(self, msg):
-        try:
-            req_pose = np.array(msg.position)
-            if any(req_pose[2:5]):
-                rospy.logwarn('Non-zero depth, pitch or roll requested. Setting those to zero.')
-            # ignore depth, pitch and roll
-            req_pose[2:6] = 0
-            req_pose[0:2] = fm.geo2ne(req_pose[0:2], self.origin, self.geo_radius)
-            self.controller.request_pose(req_pose)
-        except Exception as e:
-            rospy.logerr('%s', e)
-            rospy.logerr('Bad waypoint message format, skipping!')
+        req_pose = np.array(msg.position)
+        if any(req_pose[2:5]):
+            rospy.logwarn('Non-zero depth, pitch or roll requested. Setting those to zero.')
+        # ignore depth, pitch and roll
+        req_pose[2:6] = 0
+        req_pose[0:2] = fm.geo2ne(req_pose[0:2], self.origin, self.geo_radius)
+        self.controller.request_pose(req_pose)
 
     def handle_vel_req(self, msg):
-        try:
-            req_vel = np.array(msg.velocity)
-            if any(req_vel[1:5]):
-                rospy.logwarn('Non-zero sway, heave, pitch or roll requested. Setting those to zero.')
-            req_vel[1:5] = 0
-            self.controller.request_vel(req_vel)
-        except Exception as e:
-            rospy.logerr('%s', e)
-            rospy.logerr('Bad velocity message format, skipping!')
+        req_vel = np.array(msg.velocity)
+        if any(req_vel[1:5]):
+            rospy.logwarn('Non-zero sway, heave, pitch or roll requested. Setting those to zero.')
+        req_vel[1:5] = 0
+        self.controller.request_vel(req_vel)
 
     def handle_switch(self, srv):
         self.pilot_enable = srv.request
         if not self.pilot_enable:
             thr_msg = ThrusterCommand()
-            thr_msg.header.stamp = rospy.Time().now()
+            thr_msg.header.stamp = rospy.Time.now()
             thr_msg.throttle = np.zeros(6)
             self.throttle_pub.publish(thr_msg)
         return BooleanServiceResponse(self.pilot_enable)
@@ -275,7 +233,10 @@ class Pilot(object):
         ps.mode = STATUS_MODE[self.controller.mode]
         if self.controller.req_pose is not None:
             ps.des_pos = self.controller.req_pose.tolist()
-        ps.des_vel = self.controller.des_vel.tolist()
+
+        vel = np.zeros(6)
+        vel[0:2] = self.controller.des_vel
+        ps.des_vel = vel.tolist()
 
         self.status_pub.publish(ps)
 
@@ -290,19 +251,21 @@ if __name__ == '__main__':
     topic_velocity_request = rospy.get_param('~topic_velocity_request', TOPIC_VELOCITY_REQUEST)
     topic_nav = rospy.get_param('~topic_nav', TOPIC_NAV)
     topic_pilot_status = rospy.get_param('~topic_pilot_status', TOPIC_STATUS)
+    srv_switch = rospy.get_param('~srv_switch', SRV_SWITCH)
     simulation = bool(int(rospy.get_param('~simulation', SIMULATION)))
     controller_config = rospy.get_param('~controller', dict())
 
-    rospy.loginfo('throttle topic: %s', topic_throttle)
-    rospy.loginfo('topic_position_request: %s', topic_position_request)
-    rospy.loginfo('topic_geo_request: %s', topic_geo_request)
-    rospy.loginfo('topic_velocity_request: %s', topic_velocity_request)
-    rospy.loginfo('topic_nav: %s', topic_nav)
-    rospy.loginfo('topic_pilot_status: %s', topic_pilot_status)
+    rospy.loginfo('%s: throttle topic: %s', name, topic_throttle)
+    rospy.loginfo('%s: topic_position_request: %s', name, topic_position_request)
+    rospy.loginfo('%s: topic_geo_request: %s', name, topic_geo_request)
+    rospy.loginfo('%s: topic_velocity_request: %s', name, topic_velocity_request)
+    rospy.loginfo('%s: topic_nav: %s', name, topic_nav)
+    rospy.loginfo('%s: topic_pilot_status: %s', name, topic_pilot_status)
+    rospy.loginfo('%s: srv_switch: %s', name, srv_switch)
     # rospy.loginfo('simulation: %s', simulation)
 
     pilot = Pilot(name, topic_throttle, topic_position_request, topic_geo_request, topic_velocity_request, topic_nav,
-                  topic_pilot_status, simulation, controller_config)
+                  topic_pilot_status, srv_switch, simulation, controller_config)
     loop_rate = rospy.Rate(LOOP_RATE)
 
     while not rospy.is_shutdown():
