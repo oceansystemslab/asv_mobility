@@ -106,19 +106,11 @@ class Navigation(object):
         pass
 
     def handle_xsens(self, xsens_msg):
-        nav_msg = NavSts()
-        nav_msg.header.stamp = rospy.Time.now()
-
-        # global coords
-        nav_msg.global_position.latitude = xsens_msg.position.latitude
-        nav_msg.global_position.longitude = xsens_msg.position.longitude
-
-        self.point_ll = np.array([nav_msg.global_position.latitude, nav_msg.global_position.longitude])
+        self.point_ll = np.array([xsens_msg.position.latitude, xsens_msg.position.longitude])
 
         if not self.fix_obtained and np.any(np.abs(self.point_ll) > 1):
             self.fix_obtained = True
-            rospy.loginfo('%s: Got GPS fix: %s' % (self.name, self.origin))
-
+            rospy.loginfo('%s: Got GPS fix: %s' % (self.name, self.point_ll))
 
         # if origin is not set yet and we are at least 1 degree away from [0, 0]
         # xsens_msg.xkf_valid: - not reliable
@@ -135,6 +127,13 @@ class Navigation(object):
         # prevent sending nav if GPS not fixed
         if self.wait_for_GPS and not self.fix_obtained:
             return
+
+        nav_msg = NavSts()
+        nav_msg.header.stamp = rospy.Time.now()
+
+        # global coords
+        nav_msg.global_position.latitude = xsens_msg.position.latitude
+        nav_msg.global_position.longitude = xsens_msg.position.longitude
 
         nav_msg.origin.latitude = self.origin[0]
         nav_msg.origin.longitude = self.origin[1]
@@ -219,7 +218,7 @@ if __name__ == '__main__':
 
     topic_nav = rospy.get_param('~topic_nav', TOPIC_NAV)
     origin = rospy.get_param('~origin', None)
-    wait_for_GPS = rospy.get_param('~wait_for_GPS', True)
+    wait_for_GPS = rospy.get_param('~wait_for_GPS', False)
 
     rospy.loginfo('nav topic: %s', topic_nav)
 
