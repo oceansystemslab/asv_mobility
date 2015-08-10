@@ -115,8 +115,8 @@ class Navigation(object):
 
         self.point_ll = np.array([nav_msg.global_position.latitude, nav_msg.global_position.longitude])
 
-        if not self.fix_obtained:
-            self.fix_obtained = np.any(np.abs(self.point_ll) > 1)
+        if not self.fix_obtained and np.any(np.abs(self.point_ll) > 1):
+            self.fix_obtained = True
             rospy.loginfo('%s: Got GPS fix: %s' % (self.name, self.origin))
 
 
