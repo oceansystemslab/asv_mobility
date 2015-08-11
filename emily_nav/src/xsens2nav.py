@@ -62,7 +62,7 @@ TOPIC_XSENS = '/imu/xsens'
 SRV_RESET_ORIGIN = '/nav/reset'
 LOOP_RATE = 10  # Hz
 
-SENSOR_ANGLE_OFFSETS = np.array([np.pi, 0, np.pi])
+SENSOR_ANGLE_OFFSETS = np.array([0, 0, np.pi])
 
 class Navigation(object):
     def __init__(self, name, topic_nav, origin, wait_for_GPS, **kwargs):
@@ -191,7 +191,10 @@ class Navigation(object):
     def handle_origin_reset(self, srv):
         # set origin to where the vehicle is now
         if srv.request:
+            rospy.loginfo('%s: Setting origin to: %s', self.name, self.point_ll)
+
             self.origin = self.point_ll
+            self.displacement_ne = np.zeros(2)
             self.geocentric_radius = R_EARTH
 
         return BooleanServiceResponse(srv.request)
@@ -220,7 +223,7 @@ if __name__ == '__main__':
     origin = rospy.get_param('~origin', None)
     wait_for_GPS = rospy.get_param('~wait_for_GPS', False)
 
-    rospy.loginfo('nav topic: %s', topic_nav)
+    rospy.loginfo('%s: nav topic: %s', name, topic_nav)
 
     nav = Navigation(name, topic_nav, origin, wait_for_GPS)
     loop_rate = rospy.Rate(LOOP_RATE)
