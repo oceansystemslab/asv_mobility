@@ -5,6 +5,8 @@
          <!--set topics input and outputs-->
         <param name="origin/latitude" value="0"/>
         <param name="origin/longitude" value="0"/>
+        <param name="wait_for_GPS" type="bool" value="false"/>
+        <param name="zero_pitch_roll" type="bool" value="false"/>
     </node>
 
     <!-- imu driver -->
