@@ -58,19 +58,24 @@ from vehicle_interface.srv import BooleanService, BooleanServiceResponse
 R_EARTH = 6371000  # metres - average radius of Earth
 
 TOPIC_NAV = '/nav/nav_sts'
+TOPIC_LOW_FREQ = '/modem/packer/nav_sts'
 TOPIC_XSENS = '/imu/xsens'
 SRV_RESET_ORIGIN = '/nav/reset'
-LOOP_RATE = 10  # Hz
+LOW_FREQ = 0.1  # Hz
+ZERO_PITCH_ROLL = True
 
 SENSOR_ANGLE_OFFSETS = np.array([0, 0, np.pi])
 
 class Navigation(object):
-    def __init__(self, name, topic_nav, origin, wait_for_GPS, **kwargs):
+    def __init__(self, name, topic_nav, topic_low_freq, origin, wait_for_GPS, zero_pitch_roll, **kwargs):
         self.name = name
 
         self.point_ll = np.zeros(2)  # [latitude, longitude]
         self.displacement_ne = np.zeros(2)
 
+        self.nav_msg = NavSts()
+
+        self.zero_pitch_roll = zero_pitch_roll
         self.wait_for_GPS = wait_for_GPS
         self.fix_obtained = False
 
@@ -88,6 +93,12 @@ class Navigation(object):
             self.origin_set = False
             rospy.loginfo('%s: Origin not set. Waiting for GPS fix.' % (self.name))
 
+        self.nav_msg.origin.latitude = self.origin[0]
+        self.nav_msg.origin.longitude = self.origin[1]
+
+        self.nav_msg.global_position.latitude = self.origin[0]
+        self.nav_msg.global_position.longitude = self.origin[1]
+
         # Distance to the centre of the Earth at given latitude assuming elipsoidal model of Earth.
         # If latitude is not known assume Earth is a sphere.
         self.geocentric_radius = frame.compute_geocentric_radius(self.origin[0])
@@ -97,13 +108,16 @@ class Navigation(object):
 
         # Publishers
         self.nav_pub = rospy.Publisher(topic_nav, NavSts, tcp_nodelay=True, queue_size=1)
+        self.nav_low_freq_pub = rospy.Publisher(topic_low_freq, NavSts, tcp_nodelay=True, queue_size=1)
 
         # Services
         self.srv_reset = rospy.Service(SRV_RESET_ORIGIN, BooleanService, self.handle_origin_reset)
 
     def loop(self):
-        # something to do here?
-        pass
+        if self.wait_for_GPS and not self.fix_obtained:
+            return
+
+        self.nav_low_freq_pub.publish(self.nav_msg)
 
     def handle_xsens(self, xsens_msg):
         self.point_ll = np.array([xsens_msg.position.latitude, xsens_msg.position.longitude])
@@ -128,24 +142,24 @@ class Navigation(object):
         if self.wait_for_GPS and not self.fix_obtained:
             return
 
-        nav_msg = NavSts()
-        nav_msg.header.stamp = rospy.Time.now()
+        self.nav_msg = NavSts()
+        self.nav_msg.header.stamp = rospy.Time.now()
 
         # global coords
-        nav_msg.global_position.latitude = xsens_msg.position.latitude
-        nav_msg.global_position.longitude = xsens_msg.position.longitude
+        self.nav_msg.global_position.latitude = xsens_msg.position.latitude
+        self.nav_msg.global_position.longitude = xsens_msg.position.longitude
 
-        nav_msg.origin.latitude = self.origin[0]
-        nav_msg.origin.longitude = self.origin[1]
+        self.nav_msg.origin.latitude = self.origin[0]
+        self.nav_msg.origin.longitude = self.origin[1]
 
         self.displacement_ne = frame.geo2ne(self.point_ll, self.origin, self.geocentric_radius)
 
         # pose
-        nav_msg.position.north = self.displacement_ne[0]
-        nav_msg.position.east = self.displacement_ne[1]
-        nav_msg.position.depth = 0
-        # nav_msg.position.depth = -xsens_msg.position.altitude
-        nav_msg.altitude = xsens_msg.position.altitude
+        self.nav_msg.position.north = self.displacement_ne[0]
+        self.nav_msg.position.east = self.displacement_ne[1]
+        self.nav_msg.position.depth = 0
+        # self.nav_msg.position.depth = -xsens_msg.position.altitude
+        self.nav_msg.altitude = xsens_msg.position.altitude
 
         # TODO: simplify the conversion
         # IMU returns rotation from NWU in degrees
@@ -158,13 +172,17 @@ class Navigation(object):
         # orient_xyz = frame.wrap_pi(orient_xyz - SENSOR_ANGLE_OFFSETS)
         orient_ned = frame.wrap_pi(orient_ned - SENSOR_ANGLE_OFFSETS)
 
+        if self.zero_pitch_roll:
+            orient_ned[0:2] = 0
+
+
         # Apply rotation to get from boat_xyz to boat_ned
         # orient_ned = frame.angle_xyz2ned(orient_xyz)
 
         # TODO: figure out why roll and pitch have to be inverted and no conversion from xyz to ned is necessary for both position and rate
-        nav_msg.orientation.roll = -orient_ned[0]
-        nav_msg.orientation.pitch = -orient_ned[1]
-        nav_msg.orientation.yaw = orient_ned[2]
+        self.nav_msg.orientation.roll = -orient_ned[0]
+        self.nav_msg.orientation.pitch = -orient_ned[1]
+        self.nav_msg.orientation.yaw = orient_ned[2]
 
         # orientation rate is specified in XYZ frame
         orient_rate_xyz = np.array([xsens_msg.calibrated_gyroscope.x,
@@ -179,14 +197,14 @@ class Navigation(object):
         # apply a rotation to get from vel_ned to vel_body
         vel_body = frame.eta_world2body(vel_ned, orient_rate_ned, orient_ned)
 
-        nav_msg.body_velocity.x = vel_body[0]
-        nav_msg.body_velocity.y = vel_body[1]
-        nav_msg.body_velocity.z = vel_body[2]
-        nav_msg.orientation_rate.roll = -vel_body[3]
-        nav_msg.orientation_rate.pitch = -vel_body[4]
-        nav_msg.orientation_rate.yaw = vel_body[5]
+        self.nav_msg.body_velocity.x = vel_body[0]
+        self.nav_msg.body_velocity.y = vel_body[1]
+        self.nav_msg.body_velocity.z = vel_body[2]
+        self.nav_msg.orientation_rate.roll = -vel_body[3]
+        self.nav_msg.orientation_rate.pitch = -vel_body[4]
+        self.nav_msg.orientation_rate.yaw = vel_body[5]
 
-        self.nav_pub.publish(nav_msg)
+        self.nav_pub.publish(self.nav_msg)
 
     def handle_origin_reset(self, srv):
         # set origin to where the vehicle is now
@@ -216,17 +234,25 @@ class Navigation(object):
 
 
 if __name__ == '__main__':
-    rospy.init_node('nav_new')
+    rospy.init_node('nav')
     name = rospy.get_name()
 
     topic_nav = rospy.get_param('~topic_nav', TOPIC_NAV)
     origin = rospy.get_param('~origin', None)
-    wait_for_GPS = rospy.get_param('~wait_for_GPS', False)
+    wait_for_GPS = rospy.get_param('~wait_for_GPS', True)
+    low_freq = rospy.get_param('~low_freq', LOW_FREQ)
+    topic_low_freq = rospy.get_param('~topic_low_freq', TOPIC_LOW_FREQ)
+    zero_pitch_roll = rospy.get_param('~zero_pitch_roll', ZERO_PITCH_ROLL)
 
     rospy.loginfo('%s: nav topic: %s', name, topic_nav)
+    rospy.loginfo('%s: origin: %s', name, origin)
+    rospy.loginfo('%s: wait for GPS: %s', name, wait_for_GPS)
+    rospy.loginfo('%s: low frequency nav: %s Hz', name, low_freq)
+    rospy.loginfo('%s: low frequency topic: %s', name, topic_low_freq)
+    rospy.loginfo('%s: zero pitch roll: %s', name, zero_pitch_roll)
 
-    nav = Navigation(name, topic_nav, origin, wait_for_GPS)
-    loop_rate = rospy.Rate(LOOP_RATE)
+    nav = Navigation(name, topic_nav, topic_low_freq, origin, wait_for_GPS, zero_pitch_roll)
+    loop_rate = rospy.Rate(low_freq)
 
     while not rospy.is_shutdown():
         try:
