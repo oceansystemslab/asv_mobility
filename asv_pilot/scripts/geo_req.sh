@@ -21,7 +21,7 @@ fi
 LAT=$1
 LONG=$2
 
-rostopic pub -1 /emily/pilot/geo_req vehicle_interface/PilotRequest "header:
+rostopic pub -1 /pilot/geo_req vehicle_interface/PilotRequest "header:
   seq: 0
   stamp: {secs: 0, nsecs: 0}
   frame_id: ''

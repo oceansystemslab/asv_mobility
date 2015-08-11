@@ -26,7 +26,7 @@ D=$3
 # TODO: convert to degrees
 YAW=$4
 
-rostopic pub -1 /emily/pilot/body_req vehicle_interface/PilotRequest "header:
+rostopic pub -1 /pilot/body_req vehicle_interface/PilotRequest "header:
   seq: 0
   stamp: {secs: 0, nsecs: 0}
   frame_id: ''
