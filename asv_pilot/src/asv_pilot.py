@@ -60,6 +60,7 @@ from vehicle_interface.srv import BooleanService, BooleanServiceResponse
 # Constants
 TOPIC_THROTTLE = '/motors/throttle'
 TOPIC_POSITION_REQUEST = '/pilot/position_req'
+TOPIC_BODY_REQUEST = '/pilot/body_req'
 TOPIC_GEO_REQUEST = '/pilot/geo_req'
 TOPIC_VELOCITY_REQUEST = '/pilot/velocity_req'
 TOPIC_STATUS = '/pilot/status'
@@ -101,8 +102,8 @@ class Pilot(object):
             achieve this velocity
         - velocity control - in progress
     """
-    def __init__(self, name, topic_throttle, topic_position_request, topic_geo_request, topic_velocity_request,
-                 topic_nav, topic_pilot_status, srv_switch, simulation, controller_config):
+    def __init__(self, name, topic_throttle, topic_position_request, topic_body_request, topic_geo_request,
+                 topic_velocity_request, topic_nav, topic_pilot_status, srv_switch, simulation, controller_config):
         self.name = name
 
         # latest throttle received
@@ -124,6 +125,7 @@ class Pilot(object):
 
         # Subscribers
         self.position_sub = rospy.Subscriber(topic_position_request, PilotRequest, self.handle_pose_req, tcp_nodelay=True, queue_size=1)
+        self.body_sub = rospy.Subscriber(topic_body_request, PilotRequest, self.handle_body_req, tcp_nodelay=True, queue_size=1)
         self.geo_sub = rospy.Subscriber(topic_geo_request, PilotRequest, self.handle_geo_req, tcp_nodelay=True, queue_size=1)
         self.velocity_sub = rospy.Subscriber(topic_velocity_request, PilotRequest, self.handle_vel_req, tcp_nodelay=True, queue_size=1)
 
@@ -191,6 +193,14 @@ class Pilot(object):
         req_pose[2:6] = 0
         self.controller.request_pose(req_pose)
 
+    def handle_body_req(self, msg):
+        req_pose = np.array(msg.position)
+        # ignore depth, pitch and roll
+        if any(req_pose[2:5]):
+            rospy.logwarn('Non-zero depth, pitch or roll requested. Setting those to zero.')
+        req_pose[2:6] = 0
+        self.controller.request_body(req_pose)
+
     def handle_geo_req(self, msg):
         req_pose = np.array(msg.position)
         if any(req_pose[2:5]):
@@ -220,7 +230,7 @@ class Pilot(object):
         if srv.request is True:
             config = rospy.get_param('/controller', dict())
             self.controller.update_gains(config)
-            rospy.loginfo("PID config reloaded")
+            rospy.logwarn("PID config reloaded")
             return BooleanServiceResponse(True)
         else:
             return BooleanServiceResponse(False)
@@ -247,6 +257,7 @@ if __name__ == '__main__':
 
     topic_throttle = rospy.get_param('~topic_throttle', TOPIC_THROTTLE)
     topic_position_request = rospy.get_param('~topic_position_request', TOPIC_POSITION_REQUEST)
+    topic_body_request = rospy.get_param('~topic_body_request', TOPIC_BODY_REQUEST)
     topic_geo_request = rospy.get_param('~topic_geo_request', TOPIC_GEO_REQUEST)
     topic_velocity_request = rospy.get_param('~topic_velocity_request', TOPIC_VELOCITY_REQUEST)
     topic_nav = rospy.get_param('~topic_nav', TOPIC_NAV)
@@ -257,6 +268,7 @@ if __name__ == '__main__':
 
     rospy.loginfo('%s: throttle topic: %s', name, topic_throttle)
     rospy.loginfo('%s: topic_position_request: %s', name, topic_position_request)
+    rospy.loginfo('%s: topic_body_request: %s', name, topic_body_request)
     rospy.loginfo('%s: topic_geo_request: %s', name, topic_geo_request)
     rospy.loginfo('%s: topic_velocity_request: %s', name, topic_velocity_request)
     rospy.loginfo('%s: topic_nav: %s', name, topic_nav)
@@ -264,8 +276,8 @@ if __name__ == '__main__':
     rospy.loginfo('%s: srv_switch: %s', name, srv_switch)
     # rospy.loginfo('simulation: %s', simulation)
 
-    pilot = Pilot(name, topic_throttle, topic_position_request, topic_geo_request, topic_velocity_request, topic_nav,
-                  topic_pilot_status, srv_switch, simulation, controller_config)
+    pilot = Pilot(name, topic_throttle, topic_position_request, topic_body_request, topic_geo_request,
+                  topic_velocity_request, topic_nav, topic_pilot_status, srv_switch, simulation, controller_config)
     loop_rate = rospy.Rate(LOOP_RATE)
 
     while not rospy.is_shutdown():

@@ -160,7 +160,24 @@ class Controller(object):
         if distance > MAX_ALLOWED_DISTANCE:
             raise ValueError("Requested point too far away: %s. Farther than %s", distance, MAX_ALLOWED_DISTANCE)
 
+        # allow only xy
+        self.req_pose[2:6] = 0
+
         self.req_pose = req_pose
+        self.mode = MODE_POSITION
+        self.req_vel = None
+        # self.reset_errors(2)
+
+    def request_body(self, req_rel_pose):
+        distance = np.linalg.norm(req_rel_pose[0:2])
+        if distance > MAX_ALLOWED_DISTANCE:
+            raise ValueError("Requested point too far away: %s. Farther than %s", distance, MAX_ALLOWED_DISTANCE)
+
+        self.req_pose = self.pose + np.dot(self.J, req_rel_pose)
+
+        # allow only xy
+        self.req_pose[2:6] = 0
+
         self.mode = MODE_POSITION
         self.req_vel = None
         # self.reset_errors(2)
@@ -218,7 +235,7 @@ class Controller(object):
 
         self.prev_ev_p = self.ev_p
         self.ev_p[0] = des_vel[0] - self.body_vel[0]
-        self.ev_p[1] = wrap_pi(des_vel[1] - self.body_vel[5])
+        self.ev_p[1] = des_vel[1] - self.body_vel[5]
 
         self.ev_d = (self.ev_p - self.prev_ev_p)/self.dt
 
