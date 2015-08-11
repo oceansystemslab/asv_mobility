@@ -70,6 +70,7 @@ SRV_PID_CONFIG = '/pilot/pid_config'
 NAVIGATION_TIMEOUT = 5  # seconds
 LOOP_RATE = 5  # Hz
 SIMULATION = False
+VERBOSE = False
 
 # Status
 CTRL_DISABLED = 0
@@ -103,7 +104,7 @@ class Pilot(object):
         - velocity control - in progress
     """
     def __init__(self, name, topic_throttle, topic_position_request, topic_body_request, topic_geo_request,
-                 topic_velocity_request, topic_nav, topic_pilot_status, srv_switch, simulation, controller_config):
+                 topic_velocity_request, topic_nav, topic_pilot_status, srv_switch, verbose, controller_config):
         self.name = name
 
         # latest throttle received
@@ -116,8 +117,8 @@ class Pilot(object):
         self.nav_switch = False
 
         # TODO: set pilot_enable to False by default once tests are over
-        self.pilot_enable = CTRL_ENABLED
-        self.simulation = simulation
+        self.pilot_enable = CTRL_DISABLED
+        self.verbose = verbose
 
         self.controller = ctrl.Controller(1/LOOP_RATE)
         self.controller.set_mode(ctrl.MODE_POSITION)
@@ -140,7 +141,6 @@ class Pilot(object):
         self.srv_pid_config = rospy.Service(SRV_PID_CONFIG, BooleanService, self.handle_pid_config)
 
     def loop(self):
-        throttle = np.zeros(6)
         # if nav message is old stop the controller
         if (rospy.Time.now().to_sec() - self.last_nav_t) > NAVIGATION_TIMEOUT and self.nav_switch:
             self.nav_switch = False
@@ -148,9 +148,8 @@ class Pilot(object):
 
         if self.nav_switch and self.pilot_enable:
             throttle = self.controller.evaluate_control()
-            rospy.loginfo(str(self.controller))
-
-        # throttle[0] *= SCALE_THROTTLE
+            if self.verbose:
+                rospy.loginfo(str(self.controller))
 
             thr_msg = ThrusterCommand()
             thr_msg.header.stamp = rospy.Time.now()
@@ -263,7 +262,8 @@ if __name__ == '__main__':
     topic_nav = rospy.get_param('~topic_nav', TOPIC_NAV)
     topic_pilot_status = rospy.get_param('~topic_pilot_status', TOPIC_STATUS)
     srv_switch = rospy.get_param('~srv_switch', SRV_SWITCH)
-    simulation = bool(int(rospy.get_param('~simulation', SIMULATION)))
+    # simulation = bool(int(rospy.get_param('~simulation', SIMULATION)))
+    verbose = bool(int(rospy.get_param('~verbose', VERBOSE)))
     controller_config = rospy.get_param('~controller', dict())
 
     rospy.loginfo('%s: throttle topic: %s', name, topic_throttle)
@@ -274,10 +274,11 @@ if __name__ == '__main__':
     rospy.loginfo('%s: topic_nav: %s', name, topic_nav)
     rospy.loginfo('%s: topic_pilot_status: %s', name, topic_pilot_status)
     rospy.loginfo('%s: srv_switch: %s', name, srv_switch)
-    # rospy.loginfo('simulation: %s', simulation)
+    rospy.loginfo('verbose: %s', verbose)
 
     pilot = Pilot(name, topic_throttle, topic_position_request, topic_body_request, topic_geo_request,
-                  topic_velocity_request, topic_nav, topic_pilot_status, srv_switch, simulation, controller_config)
+                  topic_velocity_request, topic_nav, topic_pilot_status, srv_switch, verbose,
+                  controller_config)
     loop_rate = rospy.Rate(LOOP_RATE)
 
     while not rospy.is_shutdown():
