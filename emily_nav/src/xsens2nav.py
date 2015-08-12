@@ -138,6 +138,8 @@ class Navigation(object):
             rospy.logerr('%s: Current GPS: %s too far from origin: %s' % (self.name, self.point_ll, self.origin))
             raise ValueError
 
+
+        print self.wait_for_GPS, self.fix_obtained
         # prevent sending nav if GPS not fixed
         if self.wait_for_GPS and not self.fix_obtained:
             return
@@ -194,7 +196,7 @@ class Navigation(object):
         # vel_ned is velocity of the sensor in NED Earth fixed reference frame
         vel_ned = np.array([xsens_msg.velocity.x, xsens_msg.velocity.y, xsens_msg.velocity.z])
 
-        # apply a rotation to get from vel_ned to vel_body
+        # apply a rotation to get from vel_ne/ros_diamondback_ws/asv_mobility/emily_navd to vel_body
         vel_body = frame.eta_world2body(vel_ned, orient_rate_ned, orient_ned)
 
         self.nav_msg.body_velocity.x = vel_body[0]
@@ -218,7 +220,7 @@ class Navigation(object):
         return BooleanServiceResponse(srv.request)
 
     def find_geo_origin(self, point_ll, displacement_ne):
-        """Finds the origin in geo-referenced frame. The origin corresponds to (0, 0) in ned reference frame
+        """Finds the origin in geo-referenced/ros_diamondback_ws/asv_mobility/emily_nav frame. The origin corresponds to (0, 0) in ned reference frame
         (where xsens was started)
 
         :param point_ll: current position on Earth in spherical reference frame
