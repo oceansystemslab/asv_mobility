@@ -133,14 +133,14 @@ class Navigation(object):
             self.origin_set = True
             rospy.loginfo('%s: Origin set: %s' % (self.name, self.origin))
 
+        # prevent sending nav if GPS not fixed
+        if self.wait_for_GPS and not self.fix_obtained:
+            return
+
         # throw error if origin is too far from current point (1 degree away -> ~50km)
         if any(np.abs(self.point_ll - self.origin) > 1):
             rospy.logerr('%s: Current GPS: %s too far from origin: %s' % (self.name, self.point_ll, self.origin))
             # raise ValueError
-
-        # prevent sending nav if GPS not fixed
-        if self.wait_for_GPS and not self.fix_obtained:
-            return
 
         self.nav_msg = NavSts()
         self.nav_msg.header.stamp = rospy.Time.now()
