@@ -65,7 +65,7 @@ TOPIC_GEO_REQUEST = '/pilot/geo_req'
 TOPIC_VELOCITY_REQUEST = '/pilot/velocity_req'
 TOPIC_STATUS = '/pilot/status'
 TOPIC_NAV = '/nav/nav_sts'
-SRV_SWITCH = '/emily/pilot/switch'
+SRV_SWITCH = '/pilot/switch'
 SRV_PID_CONFIG = '/pilot/pid_config'
 NAVIGATION_TIMEOUT = 5  # seconds
 LOOP_RATE = 5  # Hz
@@ -274,7 +274,7 @@ if __name__ == '__main__':
     rospy.loginfo('%s: topic_nav: %s', name, topic_nav)
     rospy.loginfo('%s: topic_pilot_status: %s', name, topic_pilot_status)
     rospy.loginfo('%s: srv_switch: %s', name, srv_switch)
-    rospy.loginfo('verbose: %s', verbose)
+    rospy.loginfo('%s: verbose: %s', verbose)
 
     pilot = Pilot(name, topic_throttle, topic_position_request, topic_body_request, topic_geo_request,
                   topic_velocity_request, topic_nav, topic_pilot_status, srv_switch, verbose,
