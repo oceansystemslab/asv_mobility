@@ -7,7 +7,7 @@
         <!--55.911960, -3.322801-->
         <param name="origin/latitude" value="55.911960"/>
         <param name="origin/longitude" value="-3.322801"/>
-        <param name="wait_for_GPS" type="bool" value="false"/>
+        <param name="wait_for_GPS" type="bool" value="true"/>
         <param name="zero_pitch_roll" type="bool" value="false"/>
     </node>
 

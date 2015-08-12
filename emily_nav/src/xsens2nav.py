@@ -138,8 +138,6 @@ class Navigation(object):
             rospy.logerr('%s: Current GPS: %s too far from origin: %s' % (self.name, self.point_ll, self.origin))
             raise ValueError
 
-
-        print self.wait_for_GPS, self.fix_obtained
         # prevent sending nav if GPS not fixed
         if self.wait_for_GPS and not self.fix_obtained:
             return
