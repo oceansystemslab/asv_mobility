@@ -64,7 +64,7 @@ SRV_RESET_ORIGIN = '/nav/reset'
 LOW_FREQ = 0.1  # Hz
 ZERO_PITCH_ROLL = True
 
-SENSOR_ANGLE_OFFSETS = np.array([0, 0, np.pi])
+SENSOR_ANGLE_OFFSETS = np.array([0, 0, 0])
 
 class Navigation(object):
     def __init__(self, name, topic_nav, topic_low_freq, origin, wait_for_GPS, zero_pitch_roll, **kwargs):
@@ -170,7 +170,7 @@ class Navigation(object):
 
         # Apply rotation to get from sensor_xyz to boat_xyz rotation
         # orient_xyz = frame.wrap_pi(orient_xyz - SENSOR_ANGLE_OFFSETS)
-        orient_ned = frame.wrap_pi(orient_ned - SENSOR_ANGLE_OFFSETS)
+        # orient_ned = frame.wrap_pi(orient_ned - SENSOR_ANGLE_OFFSETS)
 
         if self.zero_pitch_roll:
             orient_ned[0:2] = 0
