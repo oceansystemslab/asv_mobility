@@ -274,7 +274,7 @@ if __name__ == '__main__':
     rospy.loginfo('%s: topic_nav: %s', name, topic_nav)
     rospy.loginfo('%s: topic_pilot_status: %s', name, topic_pilot_status)
     rospy.loginfo('%s: srv_switch: %s', name, srv_switch)
-    rospy.loginfo('%s: verbose: %s', verbose)
+    rospy.loginfo('%s: verbose: %s', name, verbose)
 
     pilot = Pilot(name, topic_throttle, topic_position_request, topic_body_request, topic_geo_request,
                   topic_velocity_request, topic_nav, topic_pilot_status, srv_switch, verbose,
