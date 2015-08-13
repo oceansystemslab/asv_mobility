@@ -1,4 +1,4 @@
 <launch>
   <!-- XSENS driver -->
-  <node name="imu_driver" pkg="xsens" type="xsens_mti_g_node" args="/dev/ttyUSB0"/>
+  <node name="imu_driver" pkg="xsens" type="xsens_mti_g_node" args="/dev/ttyUSB1"/>
 </launch>
