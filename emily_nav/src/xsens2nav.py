@@ -175,34 +175,31 @@ class Navigation(object):
         if self.zero_pitch_roll:
             orient_ned[0:2] = 0
 
+        orient_rate_ned = np.array([xsens_msg.calibrated_gyroscope.x,
+                                    xsens_msg.calibrated_gyroscope.y,
+                                    xsens_msg.calibrated_gyroscope.z])
 
         # Apply rotation to get from boat_xyz to boat_ned
         # orient_ned = frame.angle_xyz2ned(orient_xyz)
 
-        # TODO: figure out why roll and pitch have to be inverted and no conversion from xyz to ned is necessary for both position and rate
-        self.nav_msg.orientation.roll = -orient_ned[0]
-        self.nav_msg.orientation.pitch = -orient_ned[1]
-        self.nav_msg.orientation.yaw = orient_ned[2]
-
-        # orientation rate is specified in XYZ frame
-        orient_rate_xyz = np.array([xsens_msg.calibrated_gyroscope.x,
-                                    xsens_msg.calibrated_gyroscope.y,
-                                    xsens_msg.calibrated_gyroscope.z])
-
-        orient_rate_ned = frame.angle_xyz2ned(orient_rate_xyz)
+        # orient_rate_ned = frame.angle_xyz2ned(orient_rate_xyz)
 
         # vel_ned is velocity of the sensor in NED Earth fixed reference frame
-        vel_ned = np.array([xsens_msg.velocity.x, xsens_msg.velocity.y, xsens_msg.velocity.z])
+        vel_ned_earth_fixed = np.array([xsens_msg.velocity.x, xsens_msg.velocity.y, xsens_msg.velocity.z])
 
         # apply a rotation to get from vel_ne/ros_diamondback_ws/asv_mobility/emily_navd to vel_body
-        vel_body = frame.eta_world2body(vel_ned, orient_rate_ned, orient_ned)
+        vel_body = frame.eta_world2body(vel_ned_earth_fixed, np.zeros(3), orient_ned)
+
+        self.nav_msg.orientation.roll = orient_ned[0]
+        self.nav_msg.orientation.pitch = orient_ned[1]
+        self.nav_msg.orientation.yaw = orient_ned[2]
 
         self.nav_msg.body_velocity.x = vel_body[0]
         self.nav_msg.body_velocity.y = vel_body[1]
         self.nav_msg.body_velocity.z = vel_body[2]
-        self.nav_msg.orientation_rate.roll = -vel_body[3]
-        self.nav_msg.orientation_rate.pitch = -vel_body[4]
-        self.nav_msg.orientation_rate.yaw = vel_body[5]
+        self.nav_msg.orientation_rate.roll = orient_rate_ned[0]
+        self.nav_msg.orientation_rate.pitch = orient_rate_ned[1]
+        self.nav_msg.orientation_rate.yaw = orient_rate_ned[2]
 
         self.nav_pub.publish(self.nav_msg)
 
