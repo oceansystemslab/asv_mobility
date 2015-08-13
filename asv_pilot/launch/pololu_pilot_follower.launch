@@ -16,9 +16,9 @@
     </node>
 
     <node name="nessie_follower" pkg="asv_pilot" type="follower.py" output="screen">
-        <param name="topic_position_request" value="emily/pilot/position_req"/>
-        <param name="topic_emily_nav" value="emily/nav/nav_sts"/>
-        <param name="topic_nessie_nav" value="nav/nav_sts"/>
+        <param name="topic_position_request" value="pilot/position_req"/>
+        <param name="topic_emily_nav" value="nav/nav_sts"/>
+        <param name="topic_nessie_nav" value="ds/nav/nav_sts"/>
         <param name="simulation" value="true" type="bool"/>
         <param name="static_latitude" value="0.001"/>
         <param name="static_longitude" value="0.001"/>
