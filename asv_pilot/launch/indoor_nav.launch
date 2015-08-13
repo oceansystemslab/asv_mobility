@@ -10,6 +10,6 @@
     </node>
 
     <!-- imu driver -->
-	<include file="$(find emily)/launch/imu.launch"/>
+	<include file="$(find asv_pilot)/launch/imu.launch"/>
 
 </launch>
