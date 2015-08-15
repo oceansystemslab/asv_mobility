@@ -125,7 +125,7 @@ class Pilot(object):
         self.geo_sub = rospy.Subscriber(topic_geo_request, PilotRequest, self.handle_geo_req, tcp_nodelay=True, queue_size=1)
         self.velocity_sub = rospy.Subscriber(topic_velocity_request, PilotRequest, self.handle_vel_req, tcp_nodelay=True, queue_size=1)
 
-        self.nav_sub = rospy.Subscriber(topic_nav, NavSts, self.handle_real_nav, tcp_nodelay=True, queue_size=1)
+        self.nav_sub = rospy.Subscriber(topic_nav, NavSts, self.handle_nav, tcp_nodelay=True, queue_size=1)
 
         # Publishers
         self.throttle_pub = rospy.Publisher(topic_throttle, ThrusterCommand, tcp_nodelay=True, queue_size=1)
@@ -153,7 +153,7 @@ class Pilot(object):
 
         self.send_status()
 
-    def handle_real_nav(self, msg):
+    def handle_nav(self, msg):
         try:
             pos = msg.position
             orient = msg.orientation
