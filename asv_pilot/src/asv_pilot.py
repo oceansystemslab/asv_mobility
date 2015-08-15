@@ -36,9 +36,6 @@
 #
 #  Original authors:
 #   Valerio De Carolis, Marian Andrecki, Corina Barbalata, Gordon Frost
-
-# TODO: test geo request
-
 from __future__ import division
 
 import roslib
@@ -87,7 +84,6 @@ STATUS_MODE = {
     ctrl.MODE_POINT_SHOOT: 'point_shoot'
 }
 
-# TODO: move to param
 SCALE_THROTTLE = 1.0
 
 class Pilot(object):
@@ -116,7 +112,6 @@ class Pilot(object):
         self.last_nav_t = 0
         self.nav_switch = False
 
-        # TODO: set pilot_enable to False by default once tests are over
         self.pilot_enable = CTRL_DISABLED
         self.verbose = verbose
 
@@ -158,7 +153,6 @@ class Pilot(object):
 
         self.send_status()
 
-    # TODO: test on vehicle
     def handle_real_nav(self, msg):
         try:
             pos = msg.position

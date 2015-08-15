@@ -64,7 +64,7 @@ SRV_RESET_ORIGIN = '/nav/reset'
 LOW_FREQ = 0.1  # Hz
 ZERO_PITCH_ROLL = True
 
-SENSOR_ANGLE_OFFSETS = np.array([0, 0, 0])
+# SENSOR_ANGLE_OFFSETS = np.array([0, 0, 0])
 
 class Navigation(object):
     def __init__(self, name, topic_nav, topic_low_freq, origin, wait_for_GPS, zero_pitch_roll, **kwargs):
@@ -124,7 +124,7 @@ class Navigation(object):
 
         if not self.fix_obtained and np.any(np.abs(self.point_ll) > 1):
             self.fix_obtained = True
-            rospy.loginfo('%s: Got GPS fix: %s' % (self.name, self.point_ll))
+            rospy.loginfo('%s: Got first GPS fix: %s' % (self.name, self.point_ll))
 
         # if origin is not set yet and we are at least 1 degree away from [0, 0]
         # xsens_msg.xkf_valid: - not reliable
@@ -137,10 +137,10 @@ class Navigation(object):
         if self.wait_for_GPS and not self.fix_obtained:
             return
 
-        # throw error if origin is too far from current point (1 degree away -> ~50km)
-        if any(np.abs(self.point_ll - self.origin) > 1):
-            rospy.logerr('%s: Current GPS: %s too far from origin: %s' % (self.name, self.point_ll, self.origin))
-            # raise ValueError
+        # throw error if origin is too far from current point (1 degree away -> ~5km)
+        if np.linalg.norm(self.point_ll - self.origin) > 0.1:
+            rospy.logerr('%s: Current GPS: %s too far from origin: %s. Not sendig nav!' % (self.name, self.point_ll, self.origin))
+            return
 
         self.nav_msg = NavSts()
         self.nav_msg.header.stamp = rospy.Time.now()
@@ -158,36 +158,24 @@ class Navigation(object):
         self.nav_msg.position.north = self.displacement_ne[0]
         self.nav_msg.position.east = self.displacement_ne[1]
         self.nav_msg.position.depth = 0
-        # self.nav_msg.position.depth = -xsens_msg.position.altitude
         self.nav_msg.altitude = xsens_msg.position.altitude
 
-        # TODO: simplify the conversion
-        # IMU returns rotation from NWU in degrees
-        # orient_xyz = np.array([xsens_msg.orientation_euler.x, xsens_msg.orientation_euler.y, xsens_msg.orientation_euler.z])
-        # orient_xyz = np.deg2rad(orient_xyz)
+        # orientation_euler is in ned frame
         orient_ned = np.array([xsens_msg.orientation_euler.x, xsens_msg.orientation_euler.y, xsens_msg.orientation_euler.z])
         orient_ned = np.deg2rad(orient_ned)
-
-        # Apply rotation to get from sensor_xyz to boat_xyz rotation
-        # orient_xyz = frame.wrap_pi(orient_xyz - SENSOR_ANGLE_OFFSETS)
-        # orient_ned = frame.wrap_pi(orient_ned - SENSOR_ANGLE_OFFSETS)
 
         if self.zero_pitch_roll:
             orient_ned[0:2] = 0
 
+        # calibrate_gyroscope is in ned frame
         orient_rate_ned = np.array([xsens_msg.calibrated_gyroscope.x,
                                     xsens_msg.calibrated_gyroscope.y,
                                     xsens_msg.calibrated_gyroscope.z])
 
-        # Apply rotation to get from boat_xyz to boat_ned
-        # orient_ned = frame.angle_xyz2ned(orient_xyz)
-
-        # orient_rate_ned = frame.angle_xyz2ned(orient_rate_xyz)
-
-        # vel_ned is velocity of the sensor in NED Earth fixed reference frame
+        # velocity isin NED Earth fixed reference frame
         vel_ned_earth_fixed = np.array([xsens_msg.velocity.x, xsens_msg.velocity.y, xsens_msg.velocity.z])
 
-        # apply a rotation to get from vel_ne/ros_diamondback_ws/asv_mobility/emily_navd to vel_body
+        # apply a rotation to get from vel_ned to vel_body
         vel_body = frame.eta_world2body(vel_ned_earth_fixed, np.zeros(3), orient_ned)
 
         self.nav_msg.orientation.roll = orient_ned[0]
