@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-rosservice call /emily/path/clear "request: true"
+rosservice call /path/clear "request: true"
