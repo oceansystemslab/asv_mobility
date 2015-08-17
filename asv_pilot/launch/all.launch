@@ -1,6 +1,0 @@
-<launch>
-    <include file="$(find asv_pilot)/launch/pololu_pilot_follower.launch"/>
-    <include file="$(find asv_pilot)/launch/nav_imu.launch"/>
-    <include file="$(find evologics_driver)/launch/modem.launch"/>
-    <include file="$(find modem_tools)/launch/packer.launch"/>
-</launch>

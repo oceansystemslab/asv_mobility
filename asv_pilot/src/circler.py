@@ -65,20 +65,23 @@ LOOP_RATE = 1  # Hz
 
 CIRCLE_RADIUS = 8  # m
 CIRCLE_VELOCITY = 0.3  # m
-CIRCLE_TIME = 2 * np.pi * CIRCLE_RADIUS / CIRCLE_VELOCITY  # s
 
 # point sources
 SOURCE_NAV_REAL = 'nav_real'
 SOURCE_NAV_SIM = 'nav_sim'
 SOURCE_STATIC = 'static'
 
-class Follower(object):
-    def __init__(self, name, topic_position_request, topic_nav_follower, topic_nav_source, simulation, static_point=None):
+
+class Circler(object):
+    def __init__(self, name, topic_position_request, topic_nav_follower, topic_nav_source, simulation, circle_radius, static_point):
         self.name = name
 
         # origin of emily
-        self.follower_origin = None
+        self.circler_origin = None
         self.geo_radius = None
+
+        self.circle_radius = circle_radius
+        self.circle_period = self.circle_radius / CIRCLE_VELOCITY
 
         # Subscribers
         self.nav_follower_sub = rospy.Subscriber(topic_nav_follower, NavSts, self.handle_follower_nav, tcp_nodelay=True, queue_size=1)
@@ -96,7 +99,7 @@ class Follower(object):
         if static_point is not None:
             self.point_source = SOURCE_STATIC
             self.point_ll = static_point
-            self.ne = fm.geo2ne(self.point_ll, self.follower_origin, self.geo_radius)
+            self.ne = fm.geo2ne(self.point_ll, self.circler_origin, self.geo_radius)
         elif simulation is True:
             self.point_source = SOURCE_NAV_SIM
             self.point_ll = None
@@ -108,14 +111,14 @@ class Follower(object):
 
     def loop(self):
         # distance away from point in NE
-        t = rospy.Time.now().to_sec() % CIRCLE_TIME
-        added_circle = np.array([CIRCLE_RADIUS * np.cos(2*np.pi * t / CIRCLE_TIME),
-                                 CIRCLE_RADIUS * np.sin(2*np.pi * t / CIRCLE_TIME)])
+        t = rospy.Time.now().to_sec() % self.circle_period
+        added_circle = np.array([self.circle_radius * np.cos(2*np.pi * t / self.circle_period),
+                                 self.circle_radius * np.sin(2*np.pi * t / self.circle_period)])
 
         if self.point_source == SOURCE_NAV_REAL:
             if self.point_ll is None:
                 return
-            self.ne = fm.geo2ne(self.point_ll, self.follower_origin, self.geo_radius)
+            self.ne = fm.geo2ne(self.point_ll, self.circler_origin, self.geo_radius)
 
         elif self.point_source == SOURCE_NAV_SIM:
             if self.ne is None:
@@ -135,9 +138,9 @@ class Follower(object):
 
     def handle_follower_nav(self, msg):
         tmp_origin = np.array([msg.origin.latitude, msg.origin.longitude])
-        if np.any(self.follower_origin != tmp_origin):
-            self.follower_origin = tmp_origin
-            self.geo_radius = fm.compute_geocentric_radius(self.follower_origin[0])
+        if np.any(self.circler_origin != tmp_origin):
+            self.circler_origin = tmp_origin
+            self.geo_radius = fm.compute_geocentric_radius(self.circler_origin[0])
 
     def handle_source_nav(self, msg):
         if self.point_source == SOURCE_NAV_REAL:
@@ -156,6 +159,7 @@ if __name__ == '__main__':
     topic_source_nav = rospy.get_param('~topic_nessie_nav', TOPIC_NESSIE_NAV)
     static_latitude = rospy.get_param('~static_latitude', None)
     static_longitude = rospy.get_param('~static_longitude', None)
+    circle_radius = rospy.get_param('~circle_radius', CIRCLE_RADIUS)
     simulation = rospy.get_param('~simulation', False)
 
     rospy.loginfo('%s: topic_position_request: %s', name, topic_position_request)
@@ -163,6 +167,7 @@ if __name__ == '__main__':
     rospy.loginfo('%s: topic_nessie_nav: %s', name, topic_source_nav)
     rospy.loginfo('%s: static_latitude: %s', name, static_latitude)
     rospy.loginfo('%s: static_longitude: %s', name, static_longitude)
+    rospy.loginfo('%s: circle_radius: %s', name, circle_radius)
     rospy.loginfo('%s: simulation: %s', name, simulation)
 
     if static_latitude is not None and static_longitude is not None:
@@ -170,12 +175,12 @@ if __name__ == '__main__':
     else:
         static_point = None
 
-    pilot = Follower(name, topic_position_request, topic_follower_nav, topic_source_nav, simulation, static_point)
+    circ = Circler(name, topic_position_request, topic_follower_nav, topic_source_nav, simulation, circle_radius, static_point)
     loop_rate = rospy.Rate(LOOP_RATE)
 
     while not rospy.is_shutdown():
         try:
-            pilot.loop()
+            circ.loop()
             loop_rate.sleep()
         except rospy.ROSInterruptException:
             rospy.loginfo('%s caught ros interrupt!', name)

@@ -1,0 +1,19 @@
+<launch>
+
+    <node name="circler" pkg="asv_pilot" type="circler.py" output="screen">
+        <param name="topic_position_request" value="/emily/pilot/position_req"/>
+        <param name="topic_emily_nav" value="/emily/nav/nav_sts"/>
+        <param name="topic_nessie_nav" value="blank/nav/nav_sts"/>
+        <param name="simulation" value="false" type="bool"/>
+
+        <!--circle around-->
+        <!--56.384662, -4.274355-->
+        <!--<param name="static_latitude" value="56.384662"/>-->
+        <param name="static_latitude" value="0"/>
+        <param name="static_longitude" value="0"/>
+        <!--<param name="static_longitude" value="-4.274355"/>-->
+        <param name="circle_radius" value="10"/>
+    </node>
+
+
+</launch>

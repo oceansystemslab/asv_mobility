@@ -13,7 +13,7 @@
         <!-- set topics input and outputs -->
         <param name="topic_throttle" value="/motors/throttle"/>
         <param name="verbose" type="bool" value="true"/>
-        <rosparam command="load" file="$(find asv_pilot)/conf/pid_sim.yaml" />
+        <rosparam command="load" file="$(find asv_pilot)/conf/pid_real.yaml" />
     </node>
 
 </launch>

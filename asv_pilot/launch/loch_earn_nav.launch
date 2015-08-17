@@ -1,0 +1,25 @@
+<launch>
+
+    <!-- nav -->
+    <node name="emily_nav" pkg="emily_nav" type="xsens2nav.py" output="screen">
+        <!--location A-->
+        <!-- to the right from the platform -->
+        <!-- 56.385041, -4.274648 -->
+        <param name="origin/latitude" value="56.385041"/>
+        <param name="origin/longitude" value="-4.274648"/>
+
+        <!--location B-->
+        <!-- in front of the platform, 30m away -->
+        <!--56.385119, -4.274045 -->
+        <param name="origin/latitude" value="56.385041"/>
+        <param name="origin/longitude" value="-4.274648"/>
+
+        <!-- other config -->
+        <param name="wait_for_GPS" type="bool" value="true"/>
+        <param name="zero_pitch_roll" type="bool" value="true"/>
+    </node>
+
+    <!-- imu driver -->
+	<include file="$(find emily)/launch/imu.launch"/>
+
+</launch>
