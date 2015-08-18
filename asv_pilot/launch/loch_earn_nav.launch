@@ -5,14 +5,14 @@
         <!--location A-->
         <!-- to the right from the platform, 30m away from shore -->
         <!-- 56.385041, -4.274648 -->
-        <param name="origin/latitude" value="56.385041"/>
-        <param name="origin/longitude" value="-4.274648"/>
+        <!--<param name="origin/latitude" value="56.385041"/>-->
+        <!--<param name="origin/longitude" value="-4.274648"/>-->
 
         <!--location B-->
         <!-- in front of the platform, 30m away from shore -->
         <!--56.385119, -4.274045 -->
-        <!--<param name="origin/latitude" value="56.385119"/>-->
-        <!--<param name="origin/longitude" value="-4.274045"/>-->
+        <param name="origin/latitude" value="56.385119"/>
+        <param name="origin/longitude" value="-4.274045"/>
 
         <!--location C -->
         <!-- to the right of the platform, 100m away from shore -->
