@@ -28,11 +28,94 @@ Requirements
   - Python 2.7+
   - Numpy 1.8+
 
-TODOs:
--------------
-  - Prepare launch files which allow for running Emily and Nessie at the same time.
+General vehicle usage
+====================
 
-Run Simulator
+Connecting to Emily (WiFi on Emily side)
+-----------------------------------------
+
+Power up EmilyAP router, connect your computer with Ethernet cable to one of the ports on the router (for better bandwidth) or connect via WiFi - essid: EmilyAP. Make sure you have an IP address on network 192.168.42.X.
+
+Connect USB WiFi adapter with an antenna to Emily's PC. Power it up (either via bench power supply or Emily batteries). Once Emily finishes booting process it will connect to the router via WiFi. Its IP address is 192.168.42.1.
+
+The address of the router is 192.168.42.10. Once it is connected to the osl network Emily should have Internet connection.
+
+At this point you should be able to ssh or telnet into Emily. Username is emily, password is seebyte.
+
+Connecting to Emily (Ethernet)
+-----------------------------------------
+
+Power up EmilyAP router, connect your computer with Ethernet cable to one of the ports on the router (for better bandwidth) or connect via WiFi - essid: EmilyAP. Make sure you have an IP address on network 192.168.42.X.
+
+Connect Ethernet cable to Emily's PC. Power Emily up (either via bench power supply or Emily batteries). Once Emily finishes booting process it will be available under 192.168.43.1 address. Give yourself an IP address on 192.168.43.X on Ethernet.
+
+You can then ssh or telnet (look above). 
+
+Running ROS with tmux
+---------------------
+
+The WiFi link to Emily is very intermittent. Do not run more than 2 ssh terminals at the same time, try to use only 1.
+
+Learn how to use tmux. tmux allows you to open a terminal run some commands in it and then detach from it. This 
+allows for keeping the ROS nodes alive even when network connection dies. For example:
+
+First ssh to Emily:
+  ```
+  ssh emily@192.168.42.1
+  ```
+Then start tmux and run roscore in it:
+  ```
+  tmux
+  roscore
+  ```
+Once started detach from the session by pressing Ctrl+b and then d.
+
+Then start another node and detach:
+  ```
+  tmux
+  roslaunch asv_pilot indoor_nav.launch
+  Ctrl+b, d
+  ```
+You can come back to the previously detached tmux sessions. This will get you back to roscore terminal:
+  ```
+  tmux attach -t 0
+  ```
+You can rename the sessions if you like to keep the terminals in order.
+
+For full all functionalities run:
+  ```
+  roscore
+  roslaunch asv_pilot hwu_nav.launch
+  roslaunch asv_pilot pololu_pilot.launch
+  rosrun asv_pilot path_follower.py
+  roslaunch modem_tools emily_packer.launch
+  roslaunch evologics_driver emily_modem.launch
+  ```
+Hanged ssh or telnet connection
+------------------------------
+
+Sometimes ssh or telnet connection gets stuck. It may return after few minutes. The fastest way to get back the control
+is logging in with the other mechanism (with telnet is ssh is hanged) and restart ssh or telnet service:
+  ```
+  sudo service xinitd restart  # for telnet
+  ```
+or
+  ```
+  sudo service ssh restart  # for ssh
+  ```
+  
+Then try to login again.
+
+Broken network connection
+------------------------
+
+Sometimes Emily loses connection to the EmilyAP WiFi. When this happens Emily will attempt to reconnect every minute. The script used for that can be seen in /home/emily/scripts/recon_wifi.sh
+
+As Emily restarts the wireless interface ROS network should not use wlan interfaces for its IP.
+
+Once Emily reconnects to the EmilyAP all previously run terminals should available via tmux attach.
+
+Running simulator
 -------------
 
 1) Run emily with an AUV simulator (note that this models Emily is an underwater vehicle) with Emily's thruster simulator and controller:
@@ -47,7 +130,7 @@ Run Simulator
   
 3) Enable the vehicle pilot (for safety the pilot is not sending thruster commands if not enabled by the user):
   ```
-  rosservice call /pilot/switch "request: true"
+  ./asv_pilot/scripts/enable_control.sh
   ```
   
 4) Send a command to the pilot using the command-line (i.e. move the vehile to zero position):
@@ -55,28 +138,10 @@ Run Simulator
   rostopic pub /pilot/position_req vehicle_interface/PilotRequest "position: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]"
   ```
 
-Extra: For trajectory tracking, enable the path:
+5) For trajectory tracking, send the path:
   ```
-  roslaunch vehicle_core path_controller.launch
-  asv_pilot/paths/pp_fast_long.sh
-  asv_pilot/scripts/path_cli.sh start
-  ```
-
-Run Real Operation
----
-1) Launch navigation and wait until GPS fix and convergence (leave on for a minute):
-  ```
-  roslaunch emily_nav nav_imu.launch
+  rosrun asv_pilot path_follower.py
+  ./asv_pilot/scripts/ned_path_simply.sh
   ```
 
-2) Launch pololu and pilot:
-  ```
-  roslaunch asv_pilot pololu_pilot.launch
-  ```
-
-3) Proceed as you would in simulation.
-
-[semver]: http://semver.org/
-[kiss]: http://en.wikipedia.org/wiki/KISS_principle
-[tdd]: http://en.wikipedia.org/wiki/Test-driven_development
-[solid]: http://en.wikipedia.org/wiki/SOLID_(object-oriented_design)
+For more browse launch files in asv_pilot package.
