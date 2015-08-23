@@ -50,13 +50,13 @@ will terminate path!) or with GPS coordinates. Consider scripts corresponding to
  previous path has to be completed or cleared.
  
  If a path times out a stay request is issued.
+
+circler
+-------
  
- circler
- -------
+Node which can be used for following a circular path around some vehicle or around some static point.
  
- Node which can be used for following a circular path around some vehicle or around some static point.
+thrusters_sim
+-------------
  
- thrusters_sim
- -------------
- 
- Node for simulation of Emily's thrusters dynamics. Inputs and outputs are the same as pololu_driver.
+Node for simulation of Emily's thrusters dynamics. Inputs and outputs are the same as pololu_driver.
