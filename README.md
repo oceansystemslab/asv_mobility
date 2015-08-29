@@ -145,3 +145,7 @@ Running simulator
   ```
 
 For more browse launch files in asv_pilot package.
+
+
+Modifications --- only on ''real emily'':
+-- the nav is launched from the ''asv_mobility_old/emily_nav/xsens2nav.py''. After checking the /nav/nav_sts and /imu/xsens, differences between the value of the orientation in yaw was noticed.  There was an offest for yaw (in the nav at the imu-orientation-euler parameter was added 3.14: orient_ned[2]+=3.14). This was commented from the code. This is valid for placing the box containing the IMU sensor in the boat, so that the white cable ties match (the handle of the boat is facing the right side of the boat, glued up).
